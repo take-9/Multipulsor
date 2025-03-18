@@ -6,7 +6,8 @@
         beatmap: 0,
         readyTime: Infinity,
         buttonHover: [0],
-        isHost: false
+        isHost: false,
+        ready: false
     }
 
     // !!! Server Stuffs
@@ -17,7 +18,7 @@
 
     testInterval = setInterval(() => {
         if (multiplayer.code != '') { // && He == "game"
-            serverframe.contentWindow.postMessage(`uuid=${T.uuid}&score=${Math.floor(Tt.scoreFinal)}&combo=${Tt.combo}&lobbyName=${multiplayer.code}&bpmMod=${Tt.mods.bpm}&hwMod=${Tt.mods.hitWindow}&mapId=${Rt[Bt.lvl.sel]}`, "*")
+            serverframe.contentWindow.postMessage(`uuid=${T.uuid}&score=${Math.floor(Tt.scoreFinal)}&combo=${Tt.combo}&lobbyName=${multiplayer.code}&bpmMod=${Tt.mods.bpm}&hwMod=${Tt.mods.hitWindow}&mapId=${Rt[Bt.lvl.sel]}&ready=${multiplayer.ready}`, "*")
             serverframe.contentWindow.postMessage("GET", "*");
         }
     }, 500)
@@ -36,6 +37,7 @@
                         curUser.score = data.score
                         curUser.combo = data.combo
                         curUser.host = data.host
+                        curUser.ready = data.ready
                     }
                 }
                 if (!added) {
@@ -57,7 +59,7 @@
             if (!multiplayer.isHost) {
                 if (Bt.screen == "lvl" && He == "menu") {
                     if (!v.newGrabbedLevels[Number(multiData[multiplayer.code].mapId)]) {
-                        B("newGrabLevel", {
+                        B("newGrabLevelMeta", {
                             mode: "id",
                             a: Number(multiData[multiplayer.code].mapId)
                         })
@@ -156,6 +158,9 @@
             if (this.ready) {
                 stroke('rgba(0, 255, 0, 0.5)')
                 fill('rgba(0, 127, 0, 0.1)')
+            } else if (this.host) {
+                stroke('rgba(150, 150, 0, 0.5)')
+                fill('rgba(75, 75, 0, 0.1)');
             } else {
                 stroke('rgba(150, 150, 150, 0.5)')
                 fill('rgba(75, 75, 75, 0.1)');
@@ -2997,6 +3002,13 @@
             Tt.mods.perfect = false,
             Tt.mods.startPos = 0,
             Tt.mods.endPos = 0
+
+            allowStart = true
+            for (curUser in multiplayer.roomUsers) {
+                if (!curUser.isHost && curUser.ready != true) {
+                    return
+                }
+            }
         }
         if ("new" !== t ? (Rt = [],
         Rt = Uo(Ht.search, Bt.lvl.sortMode)) : (Rt = Uo(Ht.saved, "dateDesc"),
@@ -3731,7 +3743,7 @@
                         console.log("Set!")
                     }
                 }),
-                Ft("rcorner", width * 5 / 8, height * 12 / 16, width / 3, height / 16) && console.log("Hiii :3")
+                Ft("rcorner", width * 5 / 8, height * 12 / 16, width / 3, height / 16) && (multiplayer.ready = !multiplayer.ready);
             }
         if ("game" === He) {
             if (1 === Tt.disMode)
