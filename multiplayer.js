@@ -56,9 +56,15 @@
 
             if (!multiplayer.isHost) {
                 if (Bt.screen == "lvl" && He == "menu") {
+                    if (!v.newGrabbedLevels[Number(multiData[multiplayer.code].mapId)]) {
+                        B("newGrabLevel", {
+                            mode: "id",
+                            a: Number(multiData[multiplayer.code].mapId)
+                        })
+                    }
                     while (Rt.length > 1) { Rt.pop(0) }
                     Bt.lvl.search = "Wait For Host!"
-                    Rt[0] = multiData[multiplayer.code].mapId
+                    Rt[0] = Number(multiData[multiplayer.code].mapId)
                 }
            }
 
