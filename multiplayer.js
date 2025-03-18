@@ -55,10 +55,10 @@ test = window.addEventListener("message", function(event) {
         }
 
         if (!multiplayer.isHost) {
-            if (Bt.screen == "lvl" && Ht == "menu") {
+            if (Bt.screen == "lvl" && He == "menu") {
                 while (Rt.length > 1) { Rt.pop(0) }
                 Bt.lvl.search = "Wait For Host!"
-                Rt[0] = multiData[multiplayer.code].mapId
+                Rt[0] = Number(multiData[multiplayer.code].mapId)
             }
         }
 
