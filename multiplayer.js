@@ -62,14 +62,6 @@
                 }
            }
 
-            if (!multiplayer.isHost) {
-                if (Bt.screen == "lvl" && He == "menu") {
-                    while (Rt.length > 1) { Rt.pop(0) }
-                    Bt.lvl.search = "Wait For Host!"
-                    Rt[0] = Number(multiData[multiplayer.code].mapId)
-                }
-            }
-
             // lowest_join = Infinity
             // host = null
             // for (curUser of multiplayer.roomUsers) {
