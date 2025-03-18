@@ -34,10 +34,10 @@
                 for (curUser of multiplayer.roomUsers) {
                     if (curUser.uuid && curUser.uuid == uuid) {
                         added = true
-                        curUser.score = data.score
-                        curUser.combo = data.combo
-                        curUser.host = data.host
-                        curUser.ready = data.ready
+                        curUser.score = Number(data.score)
+                        curUser.combo = Number(data.combo)
+                        curUser.host = Boolean(data.host)
+                        curUser.ready = Boolean(data.ready)
                     }
                 }
                 if (!added) {
