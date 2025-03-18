@@ -19,7 +19,7 @@
 
     testInterval = setInterval(() => {
         if (multiplayer.code != '') { // && He == "game"
-            serverframe.contentWindow.postMessage(`uuid=${T.uuid}&score=${Math.floor(Tt.scoreFinal)}&combo=${Tt.combo}&lobbyName=${multiplayer.code}&bpmMod=${Tt.mods.bpm}&hwMod=${Tt.mods.hitWindow}&mapId=${Rt[Bt.lvl.sel]}&ready=${multiplayer.ready}`, "*")
+            serverframe.contentWindow.postMessage(`uuid=${T.uuid}&score=${Math.floor(Tt.scoreFinal)}&combo=${Tt.combo}&lobbyName=${multiplayer.code}&bpmMod=${Tt.mods.bpm}&hwMod=${Tt.mods.hitWindow}&mapId=${Rt[Bt.lvl.sel] ?? 10436}&ready=${multiplayer.ready}`, "*")
             serverframe.contentWindow.postMessage("GET", "*");
         }
     }, 500)
@@ -33,7 +33,7 @@
                 multiplayer.ready = false
             }
             multiplayer.mapId = multiData[multiplayer.code].mapId
-            
+
             addUsers = []
 
             //gets user data
