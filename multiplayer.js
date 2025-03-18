@@ -5,7 +5,8 @@ multiplayer = {
     roomUsers: [],
     beatmap: 0,
     readyTime: Infinity,
-    buttonHover: [0]
+    buttonHover: [0],
+    isHost: false
 }
 
 // !!! Server Stuffs
@@ -16,7 +17,7 @@ document.children[0].appendChild(serverframe);
 
 testInterval = setInterval(() => {
     if (multiplayer.code != '') { // && He == "game"
-        serverframe.contentWindow.postMessage(`uuid=${T.uuid}&score=${Math.floor(Tt.scoreFinal)}&combo=${Tt.combo}&lobbyName=${multiplayer.code}&bpmMod=${Tt.mods.bpm}&hwMod=${Tt.mods.hitWindow}`, "*")
+        serverframe.contentWindow.postMessage(`uuid=${T.uuid}&score=${Math.floor(Tt.scoreFinal)}&combo=${Tt.combo}&lobbyName=${multiplayer.code}&bpmMod=${Tt.mods.bpm}&hwMod=${Tt.mods.hitWindow}&mapId=${Rt[Bt.lvl.sel]}`, "*")
         serverframe.contentWindow.postMessage("GET", "*");
     }
 }, 500)
@@ -38,15 +39,27 @@ test = window.addEventListener("message", function(event) {
                 }
             }
             if (!added) {
-                multiplayer.roomUsers.push(new multiUser(uuid))
+                multiplayer.roomUsers.push(new MultiUser(uuid))
             }
         }
 
         for (let curUser of multiplayer.roomUsers) {
-            if (curUser.uuid == T.uuid && !curUser.host) {
-                Tt.mods.bpm = Number(multiData[multiplayer.code].mods.bpmMod)
-                Tt.mods.hitWindow = Number(multiData[multiplayer.code].mods.hwMod)
+            if (curUser.uuid == T.uuid) {
+                multiplayer.isHost = multiData[multiplayer.code].players[T.uuid].host
+
+                if (!multiplayer.isHost) {
+                    Tt.mods.bpm = Number(multiData[multiplayer.code].mods.bpmMod)
+                    Tt.mods.hitWindow = Number(multiData[multiplayer.code].mods.hwMod)
+                }
            }
+        }
+
+        if (!multiplayer.isHost) {
+            if (Bt.screen == "lvl" && Ht == "menu") {
+                while (Rt.length > 1) { Rt.pop(0) }
+                Bt.lvl.search = "Wait For Host!"
+                Rt[0] = multiData[multiplayer.code].mapId
+            }
         }
 
         // lowest_join = Infinity
@@ -65,7 +78,7 @@ test = window.addEventListener("message", function(event) {
 
 // !!! Creates class to show multiplayer user data
 
-class multiUser {
+class MultiUser {
     constructor(uuid) {
         if (v.newGrabbedUsers.uuid) {
             B("newGrabUser", {
@@ -185,10 +198,10 @@ multiplayer = {
 // m(Rt[menu.lvl.sel], "id", true);
 
 multiplayer.roomUsers = [
-    // new multiUser("dd48a6a6-e59c-46e6-96ca-f1e0f478154e"), // _t(Ut(T.uuid, "uuid").pp)
-    // // new multiUser("41ca407f-0732-4fa7-b62b-0bff8a20b07d"),
-    // new multiUser("ce2cee3b-c9fe-45ac-aba8-07d28fb8dd99"),
-    // // new multiUser("05d4ce4f-a3c1-4632-a792-6381ecece78e")
+    // new MultiUser("dd48a6a6-e59c-46e6-96ca-f1e0f478154e"), // _t(Ut(T.uuid, "uuid").pp)
+    // // new MultiUser("41ca407f-0732-4fa7-b62b-0bff8a20b07d"),
+    // new MultiUser("ce2cee3b-c9fe-45ac-aba8-07d28fb8dd99"),
+    // // new MultiUser("05d4ce4f-a3c1-4632-a792-6381ecece78e")
 ]
 F.en["settings_multiCode"] = "Multiplayer Room";
 F.en["settings_multiCode_sub"] = "Connect with other users using the same code";
@@ -2968,6 +2981,7 @@ cs.field.draw = function(A) {
 // !!! Standardize mods
 
 function qi(e, t, i) {
+    // --- EDITED CODE
     if (multiplayer.code != '') {
         Tt.mods.auto = false,
         Tt.mods.random = false,
@@ -3320,4 +3334,672 @@ function qi(e, t, i) {
     }
     !(Tt.submittedScore = null) !== i && (Vi("game", "menu"),
     Bt.lvl.loading = !0)
+}
+
+// !!! Add fs.screens
+
+fs.screens = function() {
+    if ("click" === He && 3e3 <= millis() && fs.screens.click(),
+    "menu" === He)
+        if ("logo" === Bt.screen && fs.screens.logo(),
+        "logo" !== Bt.screen && "main trans" !== Bt.screen && fs.screens.header(),
+        !0 === Bt.side)
+            fs.screens.nav();
+        else if ("account" === Bt.screen && "" === T.uuid)
+            fs.screens.accountSignedOut();
+        else if ("account" === Bt.screen)
+            fs.screens.accountSignedIn();
+        else if ("lvl" === Bt.screen && !1 === Bt.lvl.loading && !0 !== Ne) {
+            Rt = [],
+            Rt = Uo(Ht.search, Bt.lvl.sortMode);
+            for (var e = 0; e < Rt.length; e++)
+                (i = height / 16 + height / 24 + height / 12 * e - (Rt.length > (height - (height / 16 + height / 24)) / (height / 12) ? Bt.lvl.scroll / (height - (height / 16 + height / 24) - (height - (height / 16 + height / 24)) / 12) * (height / 12 * (Rt.length - (height - (height / 16 + height / 24)) / (height / 12))) : 0)) < height && 0 < i && (width > height ? width : height,
+                Ft("rcorner", 0, i, width / 3 - width / 48, height / 12)) && (Bt.lvl.sel = e,
+                !(Bt.lvl.deleteConfirm = !1) === Rt[e].local ? Tt.mods.offset = Ht.localOffsets[Ht.saved.indexOf(Rt[e])] : Tt.mods.offset = Ht.onlineOffsets[Rt[e]],
+                void 0 !== Tt.mods.offset && null !== Tt.mods.offset || (Tt.mods.offset = 0));
+            if (!1 !== Bt.lvl.sel)
+                if (!1 === Bt.lvl.deleteConfirm && !1 === Bt.lvl.uploadConfirm)
+                    if (Bt.lvl.showMods)
+                        if (vt.active)
+                            vt.callback?.();
+                        else {
+                            if (Ft("rcorner", width / 3 + kt + ((width / 3 * 2 - 2 * kt) / 2 + kt / 2), height / 16 + kt + ((height - height / 16) / 3 - 2 * kt) + kt + ((height - height / 16) / 3 - 2 * kt) + kt + (height - height / 16) / 3 / 3 * 2 + kt / 2 + ((height - height / 16) / 3 / 3 - kt / 2) / 4 * 3 - kt / 2, (width / 3 * 2 - 2 * kt) / 2 - kt / 2, ((height - height / 16) / 3 / 3 - kt / 2) / 2) && (Bt.lvl.buttonHover[11] /= 4,
+                            Bt.lvl.showMods = !Bt.lvl.showMods),
+                            Ft("rcorner", width / 3 + kt + ((width / 3 * 2 - 2 * kt) / 2 + kt / 2), height / 16 + kt + ((height - height / 16) / 3 - 2 * kt) + kt + ((height - height / 16) / 3 - 2 * kt) + kt + (height - height / 16) / 3 / 3 * 2 + kt / 2 + ((height - height / 16) / 3 / 3 - kt / 2) / 4 * 3 - kt / 2 - ((height - height / 16) / 3 / 3 - kt / 2) / 2 - kt / 2, (width / 3 * 2 - 2 * kt) / 2 - kt / 2, ((height - height / 16) / 3 / 3 - kt / 2) / 2) && (Bt.lvl.buttonHover[15] /= 4,
+                            vt.active = !0),
+                            Ft("rcorner", width / 3 + kt, height / 16 + kt + ((height - height / 16) / 3 - 2 * kt) + kt + ((height - height / 16) / 3 - 2 * kt) + kt + (height - height / 16) / 3 / 3 * 2 + kt / 2 + ((height - height / 16) / 3 / 3 - kt / 2) / 4 * 3 - kt / 2, (width / 3 * 2 - 2 * kt) / 2 - kt / 2, ((height - height / 16) / 3 / 3 - kt / 2) / 2))
+                                for (var t in Bt.lvl.buttonHover[13] /= 4,
+                                Tt.modsDef)
+                                    "offset" !== t && (Tt.mods[t] = Tt.modsDef[t]);
+                            Bt.lvl.modsNSM.click()
+                        }
+                    else if (!0 === Rt[Bt.lvl.sel]?.local)
+                        Bt.lvl.showLeaderboard || Bt.lvl.showMods ? Bt.lvl.showLeaderboard && Ft("rcorner", width / 3 + kt + ((width / 3 * 2 - 2 * kt) / 2 + kt / 2), height / 16 + kt + ((height - height / 16) / 3 - 2 * kt) + kt + ((height - height / 16) / 3 - 2 * kt) + kt + (height - height / 16) / 3 / 3 * 2 + kt / 2, (width / 3 * 2 - 2 * kt) / 2 - kt / 2, (height - height / 16) / 3 / 3 - kt / 2) && (Bt.lvl.buttonHover[9] /= 2,
+                        Bt.lvl.showLeaderboard = !Bt.lvl.showLeaderboard) : (Ft("rcorner", width / 3 + kt, height / 16 + kt + ((height - height / 16) / 3 - 2 * kt) + kt + ((height - height / 16) / 3 - 2 * kt) + kt, (width / 3 * 2 - 2 * kt) / 2 - kt / 2, (height - height / 16) / 3 / 3 * 2 - kt / 2) && (Tt.edit = !1,
+                        Tt.replay.on = !1,
+                        qi(Bt.lvl.sel),
+                        Bt.lvl.buttonHover[0] /= 2),
+                        Ft("rcorner", width / 3 + kt + (width / 3 * 2 - 4 * kt) / 3 * 0, height / 16 + kt + ((height - height / 16) / 3 - 2 * kt) + kt + ((height - height / 16) / 3 - 2 * kt) + kt + (height - height / 16) / 3 / 3 * 2 + kt / 2, (width / 3 * 2 - 4 * kt) / 3, (height - height / 16) / 3 / 3 - kt / 2) && (Bt.lvl.deleteConfirm = !0,
+                        Bt.lvl.buttonHover[1] /= 2),
+                        Ft("rcorner", width / 3 + kt + ((width / 3 * 2 - 2 * kt) / 2 - kt / 2) + kt, height / 16 + kt + ((height - height / 16) / 3 - 2 * kt) + kt + ((height - height / 16) / 3 - 2 * kt) + kt, (width / 3 * 2 - 2 * kt) / 2 - kt / 2, (height - height / 16) / 3 / 3 * 2 - kt / 2) && (Tt.edit = !0,
+                        Tt.replay.on = !1,
+                        qi(Bt.lvl.sel),
+                        Bt.lvl.buttonHover[2] /= 2),
+                        !Ft("rcorner", width / 3 + 3 * kt + (width / 3 * 2 - 4 * kt) / 3 * 2, height / 16 + kt + ((height - height / 16) / 3 - 2 * kt) + kt + ((height - height / 16) / 3 - 2 * kt) + kt + (height - height / 16) / 3 / 3 * 2 + kt / 2, (width / 3 * 2 - 4 * kt) / 3, (height - height / 16) / 3 / 3 - kt / 2) || void 0 !== Rt[Bt.lvl.sel].copy && Rt[Bt.lvl.sel].author !== T.uuid || (Bt.lvl.uploadConfirm = !0,
+                        Bt.lvl.buttonHover[3] /= 2),
+                        Ft("rcorner", width / 3 + 2 * kt + (width / 3 * 2 - 4 * kt) / 3 * 1, height / 16 + kt + ((height - height / 16) / 3 - 2 * kt) + kt + ((height - height / 16) / 3 - 2 * kt) + kt + (height - height / 16) / 3 / 3 * 2 + kt / 2, (width / 3 * 2 - 4 * kt) / 3, (height - height / 16) / 3 / 3 - kt / 2) && (Bt.lvl.buttonHover[12] /= 2,
+                        Bt.lvl.showMods = !Bt.lvl.showMods),
+                        Ft("ccenter", width / 3 + kt + (width / 3 * 2 / 3 * 2 - 2 * kt) + kt + width / 3 * 2 / 3 - kt - 1.5 * kt, height / 16 + kt + (height - height / 16) / 3 - 2 * kt - 1.5 * kt, 1.5 * kt, 1.5 * kt) && (Ht.savedDiffReq[Rt[Bt.lvl.sel].index] = void 0,
+                        Sn.clear(),
+                        --Bt.lvl.refreshArrowR));
+                    else if (Bt.lvl.showLeaderboard || Bt.lvl.showMods)
+                        Bt.lvl.showLeaderboard && (r = floor(height / 12) - kt,
+                        Ft("rcorner", width / 3 + width / 3 + kt / 2, height - height / 12 + kt / 2, width / 6, r) && (Bt.lvl.buttonHover[9] /= 2,
+                        Bt.lvl.showLeaderboard = !Bt.lvl.showLeaderboard),
+                        "Loading..." !== Bt.lvl.leaderboardData && Ft("rcorner", width / 3 + width / 3 - width / 6 - kt / 2, height - height / 12 + kt / 2, width / 6, r) && (Bt.lvl.buttonHover[14] /= 2,
+                        v.grabbedScoresLevel.splice(Rt[Bt.lvl.sel], 1),
+                        mn.clear()),
+                        Ft("rcorner", width / 3, height - floor(height / 12), width, floor(height / 12)) || Bt.lvl.newLeaderboard.click());
+                    else {
+                        if (Ft("rcorner", width / 3 + kt, height / 16 + kt + ((height - height / 16) / 3 - 2 * kt) + kt + ((height - height / 16) / 3 - 2 * kt) + kt, width / 3 * 2 - 2 * kt, (height - height / 16) / 3 / 3 * 2 - kt / 2)) {
+                            switch (qo(Rt[Bt.lvl.sel])) {
+                            case 0:
+                                m(Rt[Bt.lvl.sel], "id", !0);
+                                break;
+                            case 1:
+                                break;
+                            case 2:
+                                Tt.edit = !1,
+                                Tt.replay.on = !1,
+                                qi(Bt.lvl.sel)
+                            }
+                            Bt.lvl.buttonHover[4] /= 2
+                        }
+                        Ft("rcorner", width / 3 + kt + (width / 3 * 2 - 4 * kt) / 3 * 0, height / 16 + kt + ((height - height / 16) / 3 - 2 * kt) + kt + ((height - height / 16) / 3 - 2 * kt) + kt + (height - height / 16) / 3 / 3 * 2 + kt / 2, (width / 3 * 2 - 4 * kt) / 3, (height - height / 16) / 3 / 3 - kt / 2) && (-1 !== Ht.saved.indexOf(Rt[Bt.lvl.sel]) ? (Ht.scores.splice(Ht.saved.indexOf(Rt[Bt.lvl.sel]), 1),
+                        Ht.saved.splice(Ht.saved.indexOf(Rt[Bt.lvl.sel]), 1),
+                        0 === Bt.lvl.tab && (Ht.search = [],
+                        Bt.lvl.sel = !1,
+                        Bt.lvl.searchSent = !1)) : Ht.saved.push(Rt[Bt.lvl.sel]),
+                        Bt.lvl.buttonHover[5] /= 2),
+                        Ft("rcorner", width / 3 + 3 * kt + (width / 3 * 2 - 4 * kt) / 3 * 2, height / 16 + kt + ((height - height / 16) / 3 - 2 * kt) + kt + ((height - height / 16) / 3 - 2 * kt) + kt + (height - height / 16) / 3 / 3 * 2 + kt / 2, (width / 3 * 2 - 4 * kt) / 3, (height - height / 16) / 3 / 3 - kt / 2) && (!0 === H(Rt[Bt.lvl.sel], "id").ranked ? Bt.lvl.showLeaderboard = !Bt.lvl.showLeaderboard : "Loading..." !== H(Rt[Bt.lvl.sel], "id").author && "Metadata" !== H(Rt[Bt.lvl.sel], "id").beat && Mo(Rt[Bt.lvl.sel]),
+                        Bt.lvl.buttonHover[8] /= 2),
+                        Ft("rcorner", width / 3 + 2 * kt + (width / 3 * 2 - 4 * kt) / 3 * 1, height / 16 + kt + ((height - height / 16) / 3 - 2 * kt) + kt + ((height - height / 16) / 3 - 2 * kt) + kt + (height - height / 16) / 3 / 3 * 2 + kt / 2, (width / 3 * 2 - 4 * kt) / 3, (height - height / 16) / 3 / 3 - kt / 2) && (Bt.lvl.buttonHover[10] /= 2,
+                        Bt.lvl.showMods = !Bt.lvl.showMods),
+                        Ft("ccenter", width / 3 + kt + (width / 3 * 2 / 3 * 2 - 2 * kt) + kt + width / 3 * 2 / 3 - kt - 1.5 * kt, height / 16 + kt + (height - height / 16) / 3 - 2 * kt - 1.5 * kt, 1.5 * kt, 1.5 * kt) && (v.newGrabbedLevels[Rt[Bt.lvl.sel]] = void 0,
+                        v.newGLRequested[Rt[Bt.lvl.sel]] = void 0,
+                        v.newGLRequestedT[Rt[Bt.lvl.sel]] = void 0,
+                        v.newGLDownloading[Rt[Bt.lvl.sel]] = void 0,
+                        Sn.clear(),
+                        --Bt.lvl.refreshArrowR)
+                    }
+                else
+                    Ft("rcorner", -width / 3 * 2 + kt + width / 3 * 3 * Bt.lvl.deleteBanner, height / 16 + kt + ((height - height / 16) / 3 - 2 * kt) + kt + ((height - height / 16) / 3 - 2 * kt) + kt + (height - height / 16) / 3 / 3 * 2 + kt / 2, (width / 3 * 2 - 2 * kt) / 2 - kt / 2, (height - height / 16) / 3 / 3 - kt / 2) && (Bt.lvl.deleteConfirm ? (isNaN(Rt[Bt.lvl.sel].index) ? Gn({
+                        type: "error",
+                        message: "menu_lvl_deleteError"
+                    }) : (Ht.scores.splice(Rt[Bt.lvl.sel].index, 1),
+                    Ht.localOffsets.splice(Rt[Bt.lvl.sel].index, 1),
+                    Ht.saved.splice(Rt[Bt.lvl.sel].index, 1),
+                    Ht.search = [],
+                    Bt.lvl.searchSent = !1,
+                    Bt.lvl.sel = !1),
+                    Bt.lvl.deleteConfirm = !1) : Bt.lvl.uploadConfirm && (Bt.lvl.uploading = !0,
+                    Bt.lvl.uploadConfirm = !1,
+                    void 0 === Rt[Bt.lvl.sel].copy ? Ho(Bt.lvl.sel) : Ro(Rt[Bt.lvl.sel])),
+                    Bt.lvl.deleteBanner = 0,
+                    Bt.lvl.buttonHover[6] /= 2),
+                    Ft("rcorner", -width / 3 * 2 + width / 3 * 3 * Bt.lvl.deleteBanner + kt + ((width / 3 * 2 - 2 * kt) / 2 - kt / 2) + kt, height / 16 + kt + ((height - height / 16) / 3 - 2 * kt) + kt + ((height - height / 16) / 3 - 2 * kt) + kt + (height - height / 16) / 3 / 3 * 2 + kt / 2, (width / 3 * 2 - 2 * kt) / 2 - kt / 2, (height - height / 16) / 3 / 3 - kt / 2) && (Bt.lvl.deleteConfirm = !1,
+                    Bt.lvl.uploadConfirm = !1,
+                    Bt.lvl.buttonHover[7] /= 2);
+            Bt.lvl.scrollNewLock || (Ft("rcorner", height / 24 * 5, height / 16, width / 3 - width / 48 - height / 24 * 5, height / 24) && Ri({
+                var: [Bt.lvl, "search"],
+                title: "menu_lvl_search",
+                type: "string",
+                allowEmpty: !0,
+                after: function() {
+                    Ht.search = [],
+                    Bt.lvl.sel = !1,
+                    Bt.lvl.searchSent = !1
+                }
+            }),
+            Ft("rcorner", 0, height / 16, height / 24, height / 24) ? (Bt.lvl.tab = 0,
+            Bt.lvl.sortMode = "dateDesc",
+            Bt.lvl.showUnranked = !0,
+            Bt.lvl.search = "",
+            Ht.search = [],
+            Bt.lvl.scroll = 0,
+            Bt.lvl.sel = !1,
+            Bt.lvl.searchSent = !1,
+            Bt.lvl.viewSkip = 0) : Ft("rcorner", height / 24, height / 16, height / 24, height / 24) ? (Bt.lvl.tab = 1,
+            Bt.lvl.sortMode = "starsAsc",
+            Bt.lvl.showUnranked = !1,
+            Bt.lvl.search = "",
+            Ht.search = [],
+            Bt.lvl.scroll = 0,
+            Bt.lvl.sel = !1,
+            Bt.lvl.searchSent = !1,
+            Bt.lvl.viewSkip = 0) : Ft("rcorner", width / 3 - width / 48, height / 16, width / 48, height / 24) ? Ji() : Ft("rcorner", height / 24 * 2, height / 16, height / 24, height / 24) ? (Bt.lvl.showUnranked = !Bt.lvl.showUnranked,
+            Ht.search = [],
+            Bt.lvl.sel = !1,
+            Bt.lvl.tabHighlight[7] /= 2,
+            Bt.lvl.searchSent = !1,
+            Bt.lvl.viewSkip = 0) : Ft("rcorner", height / 24 * 4, height / 16, height / 24, height / 24) ? (Bt.lvl.searchMode = Bt.lvl.searchModes.indexOf(Bt.lvl.searchMode) + 1,
+            Bt.lvl.searchMode > Bt.lvl.searchModes.length - 1 && (Bt.lvl.searchMode = 0),
+            Bt.lvl.searchMode = Bt.lvl.searchModes[Bt.lvl.searchMode],
+            Bt.lvl.tabHighlight[2] /= 2,
+            Bt.lvl.searchSent = !1,
+            Bt.lvl.viewSkip = 0) : Ft("rcorner", height / 24 * 3, height / 16, height / 24, height / 24) && (Bt.lvl.sortMode = Bt.lvl.sortModes.indexOf(Bt.lvl.sortMode) + 1,
+            Bt.lvl.sortMode > Bt.lvl.sortModes.length - 1 && (Bt.lvl.sortMode = 0),
+            Ht.search = [],
+            Bt.lvl.sortMode = Bt.lvl.sortModes[Bt.lvl.sortMode],
+            Bt.lvl.tabHighlight[4] /= 2,
+            Bt.lvl.searchSent = !1,
+            Bt.lvl.viewSkip = 0))
+        } else if ("song" === Bt.screen)
+            if ("song" === Bt.song.mode) {
+                Rt = [],
+                Rt = Uo(O.search, Bt.song.sortMode);
+                for (var i, e = 0; e < Rt.length; e++)
+                    (i = height / 16 + height / 24 + height / 12 * e - (Rt.length > (height - (height / 16 + height / 24)) / (height / 12) ? Bt.lvl.scroll / (height - (height / 16 + height / 24) - (height - (height / 16 + height / 24)) / 12) * (height / 12 * (Rt.length - (height - (height / 16 + height / 24)) / (height / 12))) : 0)) < height && 0 < i && (width > height ? width : height,
+                    Ft("rcorner", 0, i, width / 3 - width / 48, height / 12)) && (!0 === Bt.song.listening && (Bt.song.listening = !1,
+                    soundManager.pause(Rt[Bt.song.sel]),
+                    soundManager.setVolume("menuMusic", Bt.settings.musicVolume)),
+                    Bt.song.sel = e);
+                !1 !== Bt.song.sel && (Ft("rcorner", width / 3 + kt, height / 16 + kt + ((height - height / 16) / 3 - 2 * kt) + kt + ((height - height / 16) / 3 - 2 * kt) + kt, width / 3 * 2 - 2 * kt, (height - height / 16) / 3 / 3 * 2 - kt / 2) && (So(String(Rt[Bt.song.sel])),
+                Bt.song.buttonHover[4] /= 2),
+                Ft("rcorner", width / 3 + kt, height / 16 + kt + ((height - height / 16) / 3 - 2 * kt) + kt + ((height - height / 16) / 3 - 2 * kt) + kt + (height - height / 16) / 3 / 3 * 2 + kt / 2, width / 3 * 2 - 2 * kt, (height - height / 16) / 3 / 3 - kt / 2) && (-1 !== O.saved.indexOf(Rt[Bt.song.sel]) ? (O.saved.splice(O.saved.indexOf(Rt[Bt.song.sel]), 1),
+                0 === Bt.song.tab && (O.search = [],
+                Bt.song.sel = !1)) : O.saved.push(Rt[Bt.song.sel]),
+                Bt.song.buttonHover[5] /= 2),
+                Ft("rcorner", width / 3 + kt + kt, height / 16 + kt + ((height - height / 16) / 3 - 2 * kt) + kt + ((height - height / 16) / 3 - 2 * kt) / 2 - kt, 2 * kt, 2 * kt)) && (!1 === Bt.song.listening ? (Bt.song.listening = !0,
+                ao(Rt[Bt.song.sel]),
+                soundManager.load(Rt[Bt.song.sel]),
+                soundManager.setVolume(Rt[Bt.song.sel], Bt.settings.musicVolume),
+                soundManager.setVolume("menuMusic", 0)) : (Bt.song.listening = !1,
+                soundManager.pause(Rt[Bt.song.sel]),
+                soundManager.setVolume("menuMusic", Bt.settings.musicVolume))),
+                Ft("rcorner", 0, height / 16, height / 24, height / 24) ? (Bt.song.listening && (Rt = [],
+                Rt = O.search,
+                Bt.song.listening = !1,
+                soundManager.pause(Rt[Bt.song.sel]),
+                soundManager.setVolume("menuMusic", Bt.settings.musicVolume)),
+                Bt.song.tab = 0,
+                Bt.song.search = "",
+                O.search = [],
+                Bt.lvl.scroll = 0,
+                Bt.song.sel = !1) : Ft("rcorner", height / 24, height / 16, height / 24, height / 24) ? (Bt.song.listening && (Rt = [],
+                Rt = O.search,
+                Bt.song.listening = !1,
+                soundManager.pause(Rt[Bt.song.sel]),
+                soundManager.setVolume("menuMusic", Bt.settings.musicVolume)),
+                Bt.song.tab = 1,
+                Bt.song.search = "",
+                O.search = [],
+                Bt.lvl.scroll = 0,
+                Bt.song.sel = !1) : Ft("rcorner", width / 3 - width / 48, height / 16, width / 48, height / 24) && !Bt.lvl.scrollNewLock ? void 0 !== T.uuid && null !== T.uuid && 0 !== T.uuid.length && (Bt.song.listening = !1,
+                soundManager.pause(Rt[Bt.song.sel]),
+                soundManager.setVolume("menuMusic", Bt.settings.menuMusicVolume),
+                Bt.song.mode = "newSong",
+                Bt.song.overlayOn = !0) : Ft("rcorner", height / 24 * 3, height / 16, height / 24, height / 24) ? (Bt.song.searchMode = Bt.song.searchModes.indexOf(Bt.song.searchMode) + 1,
+                Bt.song.searchMode > Bt.song.searchModes.length - 1 && (Bt.song.searchMode = 0),
+                Bt.song.searchMode = Bt.song.searchModes[Bt.song.searchMode],
+                Bt.song.tabHighlight[2] /= 2) : Ft("rcorner", height / 24 * 2, height / 16, height / 24, height / 24) && (Bt.song.sortMode = Bt.song.sortModes.indexOf(Bt.song.sortMode) + 1,
+                Bt.song.sortMode > Bt.song.sortModes.length - 1 && (Bt.song.sortMode = 0),
+                Bt.song.sortMode = Bt.song.sortModes[Bt.song.sortMode],
+                Bt.song.tabHighlight[4] /= 2),
+                Ft("rcorner", height / 24 * 4, height / 16, width / 3 - width / 48 - height / 24 * 4, height / 24) && Ri({
+                    var: [Bt.song, "search"],
+                    title: "menu_lvl_search",
+                    type: "string",
+                    allowEmpty: !0,
+                    after: function() {
+                        O.search = [],
+                        Bt.song.sel = !1
+                    }
+                })
+            } else
+                "newSong" === Bt.song.mode ? (Ft("rcorner", 3 * kt, height / 16 + height / 32 * 3 + 7 * kt + height / 16 * 8, width / 8, height / 16) ? (Bt.song.mode = "song",
+                Bt.song.overlayOn = !1,
+                Bt.newSong.title = "",
+                Bt.newSong.artist = "",
+                Bt.newSong.link = "",
+                Bt.song.errors = [],
+                Bt.song.blankErrors = [],
+                Bt.song.takenErrors = [],
+                Bt.song.buttonHover[4] /= 2) : Ft("rcorner", 4 * kt + width / 8, height / 16 + height / 32 * 3 + 7 * kt + height / 16 * 8, width / 8, height / 16) && (gn(),
+                Bt.account.buttonHover[3] /= 2),
+                Ft("rcorner", 3 * kt, height / 16 + height / 32 * 3 + 3 * kt + height / 16, width / 2, height / 16) ? Ri({
+                    var: [Bt.newSong, "title"],
+                    title: "menu_newSong_songTitle",
+                    type: "string",
+                    allowEmpty: !0
+                }) : Ft("rcorner", 3 * kt, height / 16 + height / 32 * 3 + 4 * kt + height / 16 * 3, width / 2, height / 16) ? Ri({
+                    var: [Bt.newSong, "artist"],
+                    title: "menu_newSong_songArtist",
+                    type: "string",
+                    allowEmpty: !0
+                }) : Ft("rcorner", 3 * kt, height / 16 + height / 32 * 3 + 5 * kt + height / 16 * 5, width / 2, height / 16) && (re.type = "audio",
+                re.sizeLimit = Bt.newSong.sizeLimit,
+                re.success = e => {
+                    e = e.file;
+                    const t = new FileReader;
+                    t.addEventListener("load", () => {
+                        var e = t.result;
+                        Bt.newSong.link = e
+                    }
+                    , !1),
+                    t.readAsDataURL(e)
+                }
+                ,
+                settingsFileInput.elt.click())) : "verify" === Bt.song.mode ? 2 === Bt.newSong.songObject.readyState || !0 === Bt.newSong.failedLinksCheck ? Ft("rcorner", width / 2 - width / 4 / 2, (height - height / 16) / 4 * 3, width / 4, height / 8) && (Bt.song.mode = "newSong",
+                Bt.newSong.songLoading = !1,
+                Bt.newSong.songPlaying = !1,
+                Bt.newSong.failedLinks[Bt.newSong.failedLinks.length] = Bt.newSong.link,
+                Bt.newSong.failedLinksCheck = !1,
+                Bt.song.buttonHover[7] /= 2) : 3 === Bt.newSong.songObject.readyState && (Ft("rcorner", width / 16 * 11 - width / 4 / 2, (height - height / 16) / 4 * 3, width / 4, height / 8) && (Bt.song.mode = "newSong",
+                Bt.newSong.songLoading = !1,
+                Bt.newSong.songPlaying = !1,
+                Bt.newSong.verifyDim = 0,
+                Bt.newSong.failedLinksCheck = !1,
+                Bt.song.buttonHover[8] /= 2,
+                soundManager.stop(Bt.newSong.link + "verify"),
+                to()),
+                Ft("rcorner", width / 16 * 5 - width / 4 / 2, (height - height / 16) / 4 * 3, width / 4, height / 8)) && (Bt.song.mode = "upload",
+                Bt.song.buttonHover[7] /= 2,
+                soundManager.stop(Bt.newSong.link + "verify"),
+                to(),
+                B("uploadSong", {
+                    name: Bt.newSong.title,
+                    artist: Bt.newSong.artist,
+                    link: Bt.newSong.link,
+                    uploader: T.uuid,
+                    session: T.session
+                })) : "upload" === Bt.song.mode && Ft("rcorner", width / 2 - width / 4 / 2, (height - height / 16) / 4 * 3, width / 4, height / 8) && (Bt.song.mode = "song",
+                Bt.song.overlayOn = !1,
+                Bt.newSong.songLoading = !1,
+                Bt.newSong.songPlaying = !1,
+                Bt.newSong.failedLinks[Bt.newSong.failedLinks.length] = Bt.newSong.link,
+                Bt.newSong.failedLinksCheck = !1,
+                Bt.newSong.title = "",
+                Bt.newSong.artist = "",
+                Bt.newSong.link = "",
+                Bt.song.buttonHover[7] /= 2);
+        else if ("online" === Bt.screen) {
+            if ("main" === Bt.online.mode) {
+                for (e = 0; e < Bt.online.searchedUsers.length; e++)
+                    Ft("rcorner", kt + ((width - width / 48 - 4 * kt) / 3 + kt) * (e % 3), kt + height / 16 + height / 24 + 5 * kt * floor(e / 3) + (-(kt + height / 16 + height / 24 + 5 * kt * floor((Bt.online.searchedUsers.length - 1) / 3)) + height - 5 * kt < 0 ? Bt.online.scroll : 0), (width - width / 48 - 4 * kt) / 3, 4 * kt) && mouseY > height / 16 + height / 24 && (Bt.online.viewUser = Bt.online.searchedUsers[e],
+                    Bt.online.mode = "viewUser",
+                    Bt.online.viewUserUUIDCheck = !1,
+                    bo(Bt.online.viewUser));
+                Ft("rcorner", height / 24, height / 16, width - height / 24, height / 24) && Ri({
+                    var: [Bt.online, "search"],
+                    title: "menu_lvl_search",
+                    type: "string",
+                    allowEmpty: !0,
+                    after: function() {
+                        Bt.online.searchedUsers = []
+                    }
+                }),
+                Ft("rcorner", 0, height / 16, height / 24, height / 24) && (Bt.online.searchOnline = !Bt.online.searchOnline,
+                Bt.online.tabHighlight[0] /= 2,
+                Bt.online.searchedUsers = [],
+                v.newGrabbedUser = [],
+                v.newGrabbedUserUsername = [],
+                v.newGUUnix = [],
+                v.newGURequested = [],
+                v.newGURequestedT = [])
+            } else if ("viewUser" === Bt.online.mode)
+                $n("online");
+            else if ("newSong" === Bt.online.mode)
+                !1 === Bt.newSong.verify ? Ft("rcorner", width / 32 / 2, (height - (height / 16 + height / 32 * 3)) / 16 * 11 + (height / 16 + height / 32 * 3), (width / 4 * 3 - width / 32) / 3, (height - (height / 16 + height / 32 * 3)) / 8, height / 64) ? Bt.online.mode = "song" : Ft("rcorner", width / 4 + width / 32 / 2, (height - (height / 16 + height / 32 * 3)) / 16 * 2 + (height / 16 + height / 32 * 3), width / 4 * 3 - width / 32, (height - (height / 16 + height / 32 * 3)) / 8) ? Ri({
+                    var: [Bt.newSong, "title"],
+                    title: "menu_newSong_songTitle",
+                    type: "string",
+                    allowEmpty: !1
+                }) : Ft("rcorner", width / 4 + width / 32 / 2, (height - (height / 16 + height / 32 * 3)) / 16 * 5 + (height / 16 + height / 32 * 3), width / 4 * 3 - width / 32, (height - (height / 16 + height / 32 * 3)) / 8) ? Ri({
+                    var: [Bt.newSong, "artist"],
+                    title: "menu_newSong_songArtist",
+                    type: "string",
+                    allowEmpty: !1
+                }) : Ft("rcorner", width / 4 + width / 32 / 2, (height - (height / 16 + height / 32 * 3)) / 16 * 8 + (height / 16 + height / 32 * 3), width / 4 * 3 - width / 32, (height - (height / 16 + height / 32 * 3)) / 8) || Ft("rcorner", width / 4 + width / 32 / 2, (height - (height / 16 + height / 32 * 3)) / 16 * 11 + (height / 16 + height / 32 * 3), (width / 4 * 3 - width / 32) / 3, (height - (height / 16 + height / 32 * 3)) / 8) && (0 !== Bt.newSong.title.length && 0 !== Bt.newSong.artist.length && 0 !== Bt.newSong.link.length ? Bt.newSong.verify = !0 : Bt.newSong.verifyError = !0) : !0 === Bt.newSong.verify ? 2 === Bt.newSong.songObject.readyState || !0 === Bt.newSong.failedLinksCheck ? Ft("rcorner", width / 32 / 2, (height - (height / 16 + height / 32 * 3)) / 16 * 11 + (height / 16 + height / 32 * 3), (width / 4 * 3 - width / 32) / 3, (height - (height / 16 + height / 32 * 3)) / 8, height / 64) && (Bt.newSong.verify = !1,
+                Bt.newSong.songLoading = !1,
+                Bt.newSong.songPlaying = !1,
+                Bt.newSong.verifyDim = 0,
+                Bt.newSong.failedLinks[Bt.newSong.failedLinks.length] = Bt.newSong.link,
+                Bt.newSong.failedLinksCheck = !1) : 3 === Bt.newSong.songObject.readyState && (Ft("rcenter", width / 16 * 11, (height - height / 16) / 4 * 3, width / 4, height / 8, height / 64) && (Bt.newSong.verify = !1,
+                Bt.newSong.songLoading = !1,
+                Bt.newSong.songPlaying = !1,
+                Bt.newSong.verifyDim = 0,
+                Bt.newSong.failedLinksCheck = !1,
+                soundManager.stop(Bt.newSong.link + "verify")),
+                Ft("rcenter", width / 16 * 5, (height - height / 16) / 4 * 3, width / 4, height / 8, height / 64)) && (Bt.newSong.verify = "upload",
+                soundManager.stop(Bt.newSong.link + "verify"),
+                B("uploadSong", {
+                    name: Bt.newSong.title,
+                    artist: Bt.newSong.artist,
+                    link: Bt.newSong.link,
+                    uploader: T.uuid,
+                    session: T.session
+                })) : "upload" === Bt.newSong.verify && Ft("rcorner", width / 32 / 2, (height - (height / 16 + height / 32 * 3)) / 16 * 11 + (height / 16 + height / 32 * 3), (width / 4 * 3 - width / 32) / 3, (height - (height / 16 + height / 32 * 3)) / 8, height / 64) && (Bt.newSong.verify = !1,
+                Bt.newSong.songLoading = !1,
+                Bt.newSong.songPlaying = !1,
+                Bt.newSong.verifyDim = 0,
+                Bt.newSong.failedLinks[Bt.newSong.failedLinks.length] = Bt.newSong.link,
+                Bt.newSong.failedLinksCheck = !1,
+                Bt.newSong.uploaded = !1,
+                Bt.newSong.uploadID = 0);
+            else if ("levels" === Bt.online.mode) {
+                if (mouseY > (height - height / 16) / 4 + height / 16)
+                    for (e = 0; e < Bt.onlineLvl.data.length; e++)
+                        Ft("rcorner", 0, (height - height / 16) / 4 + height / 16 + (height - height / 16) / 4 * 3 / 8 * e + (height - height / 16) / 4 * 3 / 8 * (-Bt.onlineLvl.scroll * Bt.onlineLvl.scrollSize), width - width / 32, (height - height / 16) / 4 * 3 / 8) && (Bt.onlineLvl.sel = e);
+                Ft("rcenter", width / 12 * 5 / 4 / 2 + (width / 12 * 5 - width / 12 * 5 / 4) / 4 / 2, (height - height / 16) / 4 / 3 * 1 + height / 16, (width / 12 * 5 - width / 12 * 5 / 4) / 4, (height - height / 16) / 4 / 2 / 2) && (Bt.online.mode = "main"),
+                Ft("rcenter", width / 12 * 5 + width / 4 + width / 3 / 8 * 4, height / 16 + (height - height / 16) / 4 / 6 * 2, width / 3 - 2 * (width / 12 * 5 + width / 4 + width / 3 / 8 * 2.0625 - width / 3 / 8 * 3.5 / 2 - (width / 12 * 5 + width / 4)), (height - height / 16) / 4 / 6 * 3) && _i(Bt.onlineLvl.data[Bt.onlineLvl.sel].id)
+            }
+        } else if ("settings" === Bt.screen)
+            Bt.settings.menu.click();
+        else if ("socialMedia" === Bt.screen)
+            Ft("rcorner", width / 2 - width / 4 / 2, height / 2, width / 4, height / 8) && (Bt.socialMedia.buttonHover[0] /= 2,
+            p());
+        else if ("patreon" === Bt.screen)
+            Ut(T.uuid, "uuid").patreon > w || Ft("rcorner", width / 2 - width / 4 / 2, height / 2 + height / 8, width / 4, height / 8) && (Bt.socialMedia.buttonHover[0] /= 2,
+            b());
+        else if ("morePulsus" === Bt.screen) {
+            var o = width / 16 / 2 / 2
+              , n = height / 16 * 1.5;
+            let e = 0;
+            for (const f of ["https://patreon.com/tetrogem", "https://discord.pulsus.cc", "https://wiki.pulsus.cc", "https://contribute.pulsus.cc"]) {
+                var s = height / 8 * 1.5 * e + height / 8;
+                Ft("rcorner", width - width / 4 - width / 16 + o, -height / 8 / 2 + n + s, width / 4, height / 8) && (console.log("Open " + e),
+                open(f),
+                Bt.socialMedia.buttonHover[e] /= 2),
+                e++
+            }
+        // --- EDITED CODE
+        } else if ("multiplayer" === Bt.screen) {
+            Ft("rcorner", width * 5 / 8, height * 4 / 16, width / 3, height / 16) && Ri({
+                var: [multiplayer, "code"],
+                title: "menu_lvl_search",
+                type: "string",
+                allowEmpty: !0,
+                after: function() {
+                    console.log("Set!")
+                }
+            }),
+            Ft("rcorner", width * 5 / 8, height * 12 / 16, width / 3, height / 16) && console.log("Hiii :3")
+        }
+    if ("game" === He) {
+        if (1 === Tt.disMode)
+            if (!0 === Tt.edit) {
+                var r, h, a = Tt.timelineBPM / Tt.bpm;
+                if (!1 === Tt.menu)
+                    if (Ft("rcorner", 0, 0, kt, kt))
+                        Nn();
+                    else {
+                        if (0 === Tt.editorMode) {
+                            for (e = 0; e < 9; e++)
+                                if (Ft("rcenter", Tt.board.w * Tt.board.c * 3 / 8 * (e % 3 - 1) + width / 2, Tt.board.h * Tt.board.c * 3 / 8 * (floor(e / 3) - 1) + height / 2, Tt.board.w * Tt.board.c / 4 + Tt.board.str * (Tt.board.c / 64) * Tt.missTiles[e][0], Tt.board.h * Tt.board.c / 4 + Tt.board.str * (Tt.board.c / 64) * Tt.missTiles[e][0])) {
+                                    for (var l = !1, d = 0; d < Tt.beat.length; d++)
+                                        Ot(1e6 * Tt.beat[d][1]) / 1e6 == Ot(1e6 * (Ot((Tt.time - Tt.bpm / 60 / 1e3 * Tt.timelineOffset) * (1 / Tt.snap) * a) / (1 / Tt.snap * a) + Tt.bpm / 60 / 1e3 * Tt.timelineOffset)) / 1e6 && Tt.beat[d][0] === e && (l = d);
+                                    "scroll" === Tt.timelineMode ? !1 === l ? (Tt.beat[Tt.beat.length] = [],
+                                    Tt.beat[Tt.beat.length - 1] = [e, Ot((Tt.time - Tt.bpm / 60 / 1e3 * Tt.timelineOffset) * (1 / Tt.snap) * a) / (1 / Tt.snap * a) + Tt.bpm / 60 / 1e3 * Tt.timelineOffset, !1, 0, !1, Tt.objType, Tt.holdLength / a, 0, 0, Tt.timelineBPM, Tt.timelineOffset, Tt.beatColor, null, Tt.transitionIn, Tt.transitionOut, !1, Tt.beatSaturation, Tt.beatBrightness]) : Tt.beat.splice(l, 1) : "select" === Tt.timelineMode && !1 !== l && jn(l, "beat")
+                                }
+                            if ("select" === Tt.timelineMode) {
+                                for (e = 0; e < Tt.beat.length; e++)
+                                    Ft("rcenter", width / 32 * (Tt.beat[e][1] * a) * (1 / Tt.snap) - floor(width / 36) / 3 + Ot(floor(width / 36) / 3) * floor(Tt.beat[e][0] % 3) + (width / 2 - width / 32 * (Tt.time * a / Tt.snap)), height / 16 * Tt.headerY + height / 16 - height / 16 / 2 - floor(width / 36) / 3 + Ot(floor(width / 36) / 3) * floor(Tt.beat[e][0] / 3), floor(width / 48) / 3, floor(width / 48) / 3) && jn(e, "beat");
+                                0 < Tt.selectedBeats.length && Tt.beatNSM.click()
+                            }
+                        } else if (1 === Tt.editorMode)
+                            if (Ft("rcorner", width - width / 4, height / 16 * 2, width / 2, height / 16 * 14))
+                                Tt.effectsNSM.click();
+                            else if ("select" === Tt.timelineMode)
+                                for (e = 0; e < Tt.effects.length; e++)
+                                    if (Ft("rcenter", width / 32 * (Tt.effects[e].time * a) * (1 / Tt.snap) + width / 32 * (1 / Tt.snap) * (Tt.effects[e].moveTime * a) / 2 + (width / 2 - width / 32 * (Tt.time * a / Tt.snap)), height / 16 * Tt.headerY + height / 16 - height / 16 / 2 + height / 24 * Tt.effects[e].track, width / 64 + width / 32 * (1 / Tt.snap) * (Tt.effects[e].moveTime * a), width / 64, width)) {
+                                        jn(e, "effects");
+                                        break
+                                    }
+                        if ("select" === Tt.timelineMode) {
+                            for (var g = Fn(), e = 0; e < Tt.sections.length; e++)
+                                if (Ft("ccenter", width / 32 * (Tt.sections[e].time * a) * (1 / Tt.snap) + (width / 2 - width / 32 * (Tt.time * a / Tt.snap)), height / 16 * Tt.headerY + height / 16 + floor(width / 48) / 3 + height / 24 * (1 === Tt.editorMode ? g : 0), floor(width / 48) / 3, floor(width / 48) / 3)) {
+                                    jn(e, "sections");
+                                    break
+                                }
+                            0 < Tt.sectionsSelected.length && Tt.sectionsNSM.click()
+                        }
+                        if (!1 === Tt.menu)
+                            for (e = 0; e < Tt.tools.length; e++)
+                                if (Ft("rcorner", width / Tt.tools.length * e, height - height / 16 * Tt.headerY, width / Tt.tools.length, height / 16 * -(Tt.toolsH + 1)))
+                                    0 === e && en(),
+                                    1 === e && kn("objType"),
+                                    2 === e && (1 === Tt.playbackRate ? Tt.playbackRate = .5 : .5 === Tt.playbackRate && (Tt.playbackRate = 1),
+                                    Tt.timeStart = millis(),
+                                    Tt.playingOffset = Tt.time),
+                                    4 === e && kn("clickMode"),
+                                    5 === e && (Tt.metronome = !Tt.metronome),
+                                    6 === e && zn(),
+                                    7 === e && kn("editMode"),
+                                    e === Tt.tools.length - 1 && (Tt.menu = !0);
+                                else if (!1 !== Tt.tools[e][3])
+                                    for (var c, d = 0; d < Tt.tools[e][3].length; d++)
+                                        Ft("rcorner", width / Tt.tools.length * e + width / Tt.tools.length / Tt.tools[e][3].length * d, height - height / 32 * (Tt.toolsH + 1) * (4 * Tt.tools[e][2]), width / Tt.tools.length / Tt.tools[e][3].length, height / 16 * (Tt.toolsH + 1)) && (1 === e ? (c = d,
+                                        -1 === (c = 1 === Tt.objType ? d - 1 : c) ? kn("holdLength") : 0 === c ? Ni({
+                                            hue: [Tt, "beatColor"],
+                                            saturation: [Tt, "beatSaturation"],
+                                            brightness: [Tt, "beatBrightness"],
+                                            mode: HSB,
+                                            title: "edit_select_item_beatColor"
+                                        }) : 1 === c ? mouseButton === LEFT ? Tt.transitionIn = Tt.transitionIn >= Tt.transitionNames.length - 1 ? 0 : Tt.transitionIn + 1 : mouseButton === RIGHT && (Tt.transitionIn = Tt.transitionIn <= 0 ? Tt.transitionNames.length - 1 : Tt.transitionIn - 1) : 2 === c && (mouseButton === LEFT ? Tt.transitionOut = Tt.transitionOut >= Tt.transitionNames.length - 1 ? 0 : Tt.transitionOut + 1 : mouseButton === RIGHT && (Tt.transitionOut = Tt.transitionOut <= 0 ? Tt.transitionNames.length - 1 : Tt.transitionOut - 1))) : 3 === e && (0 === d ? kn("timelineSnap") : 1 === d ? (J = Tt.timelineBPM,
+                                        Tt.playing && en(),
+                                        Ri({
+                                            var: [Tt, "timelineBPM"],
+                                            title: "edit_tool_bpm_inp",
+                                            type: "number",
+                                            allowEmpty: !1,
+                                            after: function() {
+                                                var e = Tt.timelineBPM / Tt.bpm;
+                                                Tt.time = Ot(Tt.time / J * Tt.timelineBPM * e * (1 / Tt.snap)) * Tt.snap / e,
+                                                Tt.editorHSStart = !1,
+                                                Tt.metronomeLast = !1
+                                            }
+                                        })) : 2 === d ? (_ = Tt.timelineOffset,
+                                        Tt.playing && en(),
+                                        Ri({
+                                            var: [Tt, "timelineOffset"],
+                                            title: "edit_tool_bpm_offset_inp",
+                                            type: "number",
+                                            allowEmpty: !1,
+                                            after: function() {
+                                                Tt.time += Tt.bpm / 60 / 1e3 * (Tt.timelineOffset - _),
+                                                Tt.editorHSStart = !1,
+                                                Tt.metronomeLast = !1
+                                            }
+                                        })) : 3 === d ? An() : 4 === d && (Tt.playing && en(),
+                                        Tt.jumpToTimestamp = !1,
+                                        Ri({
+                                            var: [Tt, "jumpToTimestamp"],
+                                            title: "edit_tool_timestamp",
+                                            type: "string",
+                                            allowEmpty: !0,
+                                            after: function() {
+                                                var e;
+                                                null !== Tt.jumpToTimestamp && !1 !== (e = Ii(Tt.jumpToTimestamp)) && (Tt.time = e)
+                                            },
+                                            display: Xt({
+                                                recieve: "bpm",
+                                                time: Tt.time,
+                                                bpm: Tt.timelineBPM,
+                                                offset: Tt.timelineOffset,
+                                                lvlBPM: Tt.bpm
+                                            })
+                                        }))))
+                    }
+                else
+                    Tt.exiting ? (r = (width / 2 - 2 * kt) / 1.5,
+                    h = height / 4 / 1.5,
+                    Ft("rcorner", width / 4 - r / 2, height / 4 * 2.5 - h / 4, r, h) && (Tt.buttonHover[2] /= 2,
+                    yn()),
+                    Ft("rcorner", width / 4 * 3 - r / 2, height / 4 * 2.5 - h / 4, r, h) && (Tt.buttonHover[3] /= 2,
+                    Tt.exiting = !1)) : (Tt.menuNSM.click(),
+                    Ft("rcorner", width / Tt.tools.length * (Tt.tools.length - 1), height - height / 16 * Tt.headerY, width / Tt.tools.length, height / 16 * -(Tt.toolsH + 1)) && (Tt.menu = !1))
+            } else
+                Tt.paused && 1 === Tt.disMode && !1 === Tt.resumeTime && (Ft("rcorner", width / 2 - width / 4 / 2, height / 2 - height / 8 / 2 - height / 8 * 1.25, width / 4, height / 8) ? Mn("continue") : Ft("rcorner", width / 2 - width / 4 / 2, height / 2 - height / 8 / 2, width / 4, height / 8) && Mn("retry"),
+                Ft("rcorner", width / 2 - width / 4 / 2, height / 2 - height / 8 / 2 + height / 8 * 1.25, width / 4, height / 8)) && Mn("menu");
+        2 === Tt.disMode && !1 === Tt.edit && (Ft("rcorner", width / 3 * 2 + kt, height - height / 8 - kt, width / 3 - 2 * kt, height / 8) ? Mn("menu") : Ft("rcorner", width / 3 * 2 + kt, height - height / 8 * 2 - 2 * kt, width / 3 - 2 * kt, height / 8) ? Mn("retry") : Tt.performanceDotCallback && Tt.performanceDotCallback())
+    }
+}
+
+// Re-pasting all fs.screens functions necessary
+
+fs.screens.accountSignedIn = function() {
+    0 < T.uuid.length && !Bt.account.countryScreen && !Bt.account.friendsScreen ? us() : Bt.account.countryScreen ? vs() : !1 !== Bt.account.friendsScreen && !1 === Bt.account.viewFriend ? ms() : !1 !== Bt.account.friendsScreen && !1 !== Bt.account.viewFriend && $n("account")
+}
+,
+fs.screens.accountSignedOut = function() {
+    var e = width > height ? width / 64 : height / 64;
+    Bt.account.overlayOn ? (Ft("rcorner", 3 * e, height / 16 + height / 32 * 3 + 7 * e + height / 16 * 8, width / 8, height / 16) ? ("haveCode" === Bt.account.mode ? Bt.account.mode = "resetPassword" : "resetPasswordConf" === Bt.account.mode ? Bt.account.mode = "haveCode" : (Bt.account.overlayOn = !1,
+    Bt.account.user = "",
+    Bt.account.email = "",
+    Bt.account.pass = "",
+    Bt.account.passConf = "",
+    Bt.account.code = "",
+    Bt.account.codeUuid = ""),
+    Bt.account.errors = [],
+    Bt.account.blankErrors = [],
+    Bt.account.takenErrors = [],
+    Bt.account.resetPassComplete = !1,
+    Bt.account.buttonHover[2] /= 2) : Ft("rcorner", 4 * e + width / 8, height / 16 + height / 32 * 3 + 7 * e + height / 16 * 8, width / 8, height / 16) && ("signup" === Bt.account.mode ? hn() : "login" === Bt.account.mode ? an() : "resetPassword" === Bt.account.mode ? fn() : "haveCode" === Bt.account.mode ? un() : "resetPasswordConf" === Bt.account.mode && vn(),
+    Bt.account.buttonHover[3] /= 2),
+    "signup" === Bt.account.mode ? Ft("rcorner", 3 * e, height / 16 + height / 32 * 3 + 3 * e + height / 16, width / 2, height / 16) ? Ri({
+        var: [Bt.account, "user"],
+        title: "menu_account_username",
+        type: "string",
+        allowEmpty: !0,
+        after: function() {
+            (Bt.account.blankErrors[0] || Bt.account.takenErrors[0]) && 0 < Bt.account.user.length && (Bt.account.blankErrors[0] = !1,
+            Bt.account.takenErrors[0] = !1)
+        }
+    }) : Ft("rcorner", 3 * e, height / 16 + height / 32 * 3 + 4 * e + height / 16 * 3, width / 2, height / 16) ? Ri({
+        var: [Bt.account, "email"],
+        title: "menu_account_email",
+        type: "string",
+        allowEmpty: !0,
+        after: function() {
+            (Bt.account.blankErrors[1] || Bt.account.takenErrors[1]) && 0 < Bt.account.email.length && (Bt.account.blankErrors[1] = !1,
+            Bt.account.takenErrors[1] = !1)
+        }
+    }) : Ft("rcorner", 3 * e, height / 16 + height / 32 * 3 + 5 * e + height / 16 * 5, width / 2, height / 16) ? Ri({
+        var: [Bt.account, "pass"],
+        title: "menu_account_password",
+        type: "string",
+        allowEmpty: !0,
+        password: !0,
+        after: function() {
+            Bt.account.blankErrors[2] && 0 < Bt.account.pass.length && (Bt.account.blankErrors[2] = !1)
+        }
+    }) : Ft("rcorner", 3 * e, height / 16 + height / 32 * 3 + 6 * e + height / 16 * 7, width / 2, height / 16) && Ri({
+        var: [Bt.account, "passConf"],
+        title: "menu_account_passwordConfirm",
+        type: "string",
+        allowEmpty: !0,
+        password: !0,
+        after: function() {
+            Bt.account.blankErrors[3] && 0 < Bt.account.passConf.length && (Bt.account.blankErrors[3] = !1)
+        }
+    }) : "login" === Bt.account.mode ? Ft("rcorner", 3 * e, height / 16 + height / 32 * 3 + 3 * e + height / 16, width / 2, height / 16) ? Ri({
+        var: [Bt.account, "email"],
+        title: "menu_account_email",
+        type: "string",
+        allowEmpty: !0,
+        after: function() {
+            (Bt.account.blankErrors[1] || Bt.account.takenErrors[1]) && 0 < Bt.account.email.length && (Bt.account.blankErrors[1] = !1,
+            Bt.account.takenErrors[1] = !1)
+        }
+    }) : Ft("rcorner", 3 * e, height / 16 + height / 32 * 3 + 4 * e + height / 16 * 3, width / 2, height / 16) && Ri({
+        var: [Bt.account, "pass"],
+        title: "menu_account_password",
+        type: "string",
+        allowEmpty: !0,
+        password: !0,
+        after: function() {
+            Bt.account.blankErrors[2] && 0 < Bt.account.pass.length && (Bt.account.blankErrors[2] = !1)
+        }
+    }) : "resetPassword" === Bt.account.mode ? Ft("rcorner", 3 * e, height / 16 + height / 32 * 3 + 3 * e + height / 16, width / 2, height / 16) ? Ri({
+        var: [Bt.account, "user"],
+        title: "menu_account_username",
+        type: "string",
+        allowEmpty: !0,
+        after: function() {
+            (Bt.account.blankErrors[0] || Bt.account.takenErrors[0]) && 0 < Bt.account.user.length && (Bt.account.blankErrors[0] = !1,
+            Bt.account.takenErrors[0] = !1)
+        }
+    }) : Ft("rcorner", 3 * e, height / 16 + height / 32 * 3 + 4 * e + height / 16 * 3, width / 2, height / 16) ? Ri({
+        var: [Bt.account, "email"],
+        title: "menu_account_email",
+        type: "string",
+        allowEmpty: !0,
+        after: function() {
+            (Bt.account.blankErrors[1] || Bt.account.takenErrors[0]) && 0 < Bt.account.email.length && (Bt.account.blankErrors[1] = !1,
+            Bt.account.takenErrors[0] = !1)
+        }
+    }) : Ft("rcorner", 5 * e + width / 8 * 2, height / 16 + height / 32 * 3 + 7 * e + height / 16 * 8, width / 2 - 2 * e - width / 8 * 2, height / 16) && (Bt.account.mode = "haveCode",
+    Bt.account.errors = [],
+    Bt.account.blankErrors = [],
+    Bt.account.takenErrors = []) : "haveCode" === Bt.account.mode ? Ft("rcorner", 3 * e, height / 16 + height / 32 * 3 + 3 * e + height / 16, width / 2, height / 16) && Ri({
+        var: [Bt.account, "code"],
+        title: "menu_account_code",
+        type: "string",
+        allowEmpty: !0,
+        after: function() {
+            (Bt.account.blankErrors[4] || Bt.account.takenErrors[4]) && 0 < Bt.account.code.length && (Bt.account.blankErrors[4] = !1,
+            Bt.account.takenErrors[4] = !1)
+        }
+    }) : "resetPasswordConf" === Bt.account.mode && (Ft("rcorner", 3 * e, height / 16 + height / 32 * 3 + 3 * e + height / 16, width / 2, height / 16) ? Ri({
+        var: [Bt.account, "pass"],
+        title: "menu_account_passwordNew",
+        type: "string",
+        allowEmpty: !0,
+        password: !0,
+        after: function() {
+            Bt.account.blankErrors[2] && 0 < Bt.account.pass.length && (Bt.account.blankErrors[2] = !1)
+        }
+    }) : Ft("rcorner", 3 * e, height / 16 + height / 32 * 3 + 4 * e + height / 16 * 3, width / 2, height / 16) && Ri({
+        var: [Bt.account, "passConf"],
+        title: "menu_account_passwordConfirm",
+        type: "string",
+        allowEmpty: !0,
+        password: !0,
+        after: function() {
+            Bt.account.blankErrors[3] && 0 < Bt.account.passConf.length && (Bt.account.blankErrors[3] = !1)
+        }
+    }))) : Ft("rcorner", e, height / 16 + height / 32 * 3 + 2 * e, width / 4, height / 8) ? (Bt.account.mode = "signup",
+    Bt.account.overlayOn = !0,
+    Bt.account.buttonHover[0] /= 2) : Ft("rcorner", e, height / 16 + height / 32 * 3 + height / 8 + 3 * e, width / 4, height / 8) ? (Bt.account.mode = "login",
+    Bt.account.overlayOn = !0,
+    Bt.account.buttonHover[1] /= 2) : Ft("rcorner", e, height / 16 + height / 32 * 3 + height / 8 * 2 + 4 * e, width / 4, height / 8) && (Bt.account.mode = "resetPassword",
+    Bt.account.overlayOn = !0,
+    Bt.account.buttonHover[4] /= 2)
+}
+,
+fs.screens.click = function() {
+    He = "welcome",
+    eo(),
+    s.startTime = millis()
+}
+,
+fs.screens.logo = function() {
+    Ft("rcorner", width - 7 * kt, height - 7 * kt * (s.strC[3] / 255), 6 * kt, 6 * kt) ? (p(),
+    Bt.lvl.buttonHover[19] /= 2) : (Bt.screen = "main trans",
+    s.pulse = 0)
+}
+,
+fs.screens.header = function() {
+    Ft("rcorner", height / 64 - height / 128 / 4, height / 64 - height / 128 / 4, height / 32 + height / 128 / 2, height / 32 + height / 128 / 2) && (Bt.side = !Bt.side)
+}
+,
+fs.screens.nav = function() {
+    for (var e = 0; e < Bt.nav.length; e++)
+        mouseX < abs(width / 5 + width / 5 * Bt.sideX) && mouseY > height / 16 + height / 16 * e + height / 16 / 2 && mouseY < height / 16 + height / 16 * e + (height / 16 + height / 16 / 2) ? Bt.nav[e][1] !== Bt.screen ? (Bt.trans = Bt.nav[e][1],
+        Bt.song.listening && (Rt = [],
+        Rt = O.search,
+        Bt.song.listening = !1,
+        soundManager.pause(Rt[Bt.song.sel]),
+        soundManager.setVolume("menuMusic", Bt.settings.menuMusicVolume))) : Bt.side = !1 : mouseX > abs(width / 5 * Bt.sideW + Bt.sideX) && mouseY > height / 16 && (Bt.side = !1)
 }
