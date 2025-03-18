@@ -7,7 +7,8 @@
         readyTime: Infinity,
         buttonHover: [0],
         isHost: false,
-        ready: false
+        ready: false,
+        mapId: 10436
     }
 
     // !!! Server Stuffs
@@ -25,7 +26,14 @@
 
     test = window.addEventListener("message", function(event) {
         if ((event.data.type ?? "nop") != "rpc") {
+
             multiData = JSON.parse(event.data.replaceAll("'", '"'))
+
+            if (multiData[multiplayer.code].mapId != multiplayer.mapId) {
+                multiplayer.ready = false
+            }
+            multiplayer.mapId = multiData[multiplayer.code].mapId
+            
             addUsers = []
 
             //gets user data
@@ -57,16 +65,17 @@
             }
 
             if (!multiplayer.isHost) {
+
                 if (Bt.screen == "lvl" && He == "menu") {
-                    if (!v.newGrabbedLevels[Number(multiData[multiplayer.code].mapId)]) {
+                    if (!v.newGrabbedLevels[multiplayer.mapId]) {
                         B("newGrabLevelMeta", {
                             mode: "id",
-                            a: Number(multiData[multiplayer.code].mapId)
+                            a: multiplayer.mapId
                         })
                     }
                     while (Rt.length > 1) { Rt.pop(0) }
                     Bt.lvl.search = "Wait For Host!"
-                    Rt[0] = Number(multiData[multiplayer.code].mapId)
+                    Rt[0] = multiplayer.mapId
                 }
            }
 
@@ -155,12 +164,12 @@
             smooth(),
             rectMode(CORNER),
             strokeWeight(kt/8);
-            if (this.ready) {
-                stroke('rgba(0, 255, 0, 0.5)')
-                fill('rgba(0, 127, 0, 0.1)')
-            } else if (this.host) {
+            if (this.host) {
                 stroke('rgba(150, 150, 0, 0.5)')
                 fill('rgba(75, 75, 0, 0.1)');
+            } else if (this.ready) {
+                stroke('rgba(0, 255, 0, 0.5)')
+                fill('rgba(0, 127, 0, 0.1)')
             } else {
                 stroke('rgba(150, 150, 150, 0.5)')
                 fill('rgba(75, 75, 75, 0.1)');
@@ -3003,9 +3012,9 @@
             Tt.mods.startPos = 0,
             Tt.mods.endPos = 0
 
-            allowStart = true
-            for (curUser in multiplayer.roomUsers) {
-                if (!curUser.isHost && curUser.ready != true) {
+            for (curUser of multiplayer.roomUsers) {
+                if (!curUser.isHost && !curUser.ready) {
+                    console.log(curUser)
                     return
                 }
             }
@@ -3743,7 +3752,9 @@
                         console.log("Set!")
                     }
                 }),
-                Ft("rcorner", width * 5 / 8, height * 12 / 16, width / 3, height / 16) && (multiplayer.ready = !multiplayer.ready);
+                Ft("rcorner", width * 5 / 8, height * 12 / 16, width / 3, height / 16) && (
+                    v.newGrabbedLevels[multiplayer.mapId] ? multiplayer.ready = !multiplayer.ready : multiplayer.ready = false
+                );
             }
         if ("game" === He) {
             if (1 === Tt.disMode)
