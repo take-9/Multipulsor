@@ -18,7 +18,8 @@ multiplayer = {
     selMods: {
         bpm: 1,
         hw: 1
-    }
+    },
+    startTime: 0
 }
 
 // !!! Server Stuffs
@@ -27,76 +28,155 @@ let serverframe = document.createElement("iframe");
 serverframe.src = "https://172.104.10.6/Server.html";
 document.children[0].appendChild(serverframe);
 
-setTimeout(() => {
-    testInterval = setInterval(() => {
-        if (multiplayer.code != '') { // && He == "game"
-            if (serverframe.contentWindow) {
-                serverframe.contentWindow.postMessage(`uuid=${T.uuid}&score=${Math.floor(Tt.scoreFinal) ?? 0}&combo=${Tt.combo ?? 0}&lobbyName=${multiplayer.code}&bpmMod=${Tt.mods.bpm ?? 1}
-                &hwMod=${Tt.mods.hitWindow ?? 1}&mapId=${multiplayer.mapId ?? 10436}&ready=${multiplayer.ready ?? false}`, "*") // selLevel
-                serverframe.contentWindow.postMessage("GET", "*");
-            } else {
-                console.log("Server is overwhelmed!")
-            }
+testInterval = setInterval(() => {
+    if (multiplayer.code != '' && serverframe.contentWindow) {
+        if (Tt.disMode == 1 && He === "game") {
+            serverframe.contentWindow.postMessage(`POST method=setScoreboard&uuid=${T.uuid}&score=${Math.floor(Tt.scoreFinal) ?? 0}&combo=${Tt.combo ?? 0}`, "*")
+            serverframe.contentWindow.postMessage(`GET method=getScoreboard&lobbyName=${multiplayer.code}`, "*");
+        } else if (Bt.screen == "multiplayer") {
+            serverframe.contentWindow.postMessage(`GET method=getLobbyData&lobbyName=${multiplayer.code}`, "*");
         }
-    }, 500)
+        // serverframe.contentWindow.postMessage(`uuid=${T.uuid}&score=${Math.floor(Tt.scoreFinal) ?? 0}&combo=${Tt.combo ?? 0}&lobbyName=${multiplayer.code}&bpmMod=${Tt.mods.bpm ?? 1}
+        // &hwMod=${Tt.mods.hitWindow ?? 1}&mapId=${multiplayer.mapId ?? 10436}&ready=${multiplayer.ready ?? false}`, "*") // selLevel
+    }
 }, 500)
+
+startMatch = setInterval(() => {
+    if (multiplayer.code != '' && multiplayer.startTime > Date.now() && He != "menu" && Tt.disMode != 1) {
+        qi(Bt.lvl.sel)
+        setTimeout(() => {
+            Mn("retry")
+        }, multiplayer.startTime - Date.now())
+    }
+}, 500) 
+
+// Logoff if user leaves site without hitting the x
+window.addEventListener('beforeunload', function(event) {
+    serverframe.contentWindow.postMessage(`POST method=logoff&uuid=${T.uuid}`, "*")
+});
 
 test = window.addEventListener("message", function(event) {
     if ((event.data.type ?? "nop") != "rpc") {
 
         multiData = JSON.parse(event.data.replaceAll("'", '"'))
+        
+        if (multiData.method == "getScoreboard") {
+            
+            for (const [uuid, data] of Object.entries(multiData.players)) {
+                if (uuid in multiplayer.roomUsers) {
+                    multiplayer.roomUsers[uuid].score = Number(data.score)
+                    multiplayer.roomUsers[uuid].combo = Number(data.combo)
+                } else {
+                    multiplayer.roomUsers[uuid] = new MultiUser(uuid)
+                }
+                // for (curUser of Object.values(multiplayer.roomUsers)) {
+                //     if (curUser.uuid && curUser.uuid == uuid) {
+                //         added = true
+                //         curUser.score = Number(data.score)
+                //         curUser.combo = Number(data.combo)
+                //     }
+                // }
+                // if (!added) {
+                //     multiplayer.roomUsers[uuid] = new MultiUser(uuid)
+                // }
+            }
 
-        if (multiData[multiplayer.code].mapId != multiplayer.mapId) {
-            multiplayer.ready = false
+        } else if (multiData.method == "getLobbyData") {
+
+            if (multiData.mapId != multiplayer.mapId) {
+                multiplayer.ready = false
+            }
+
+            multiplayer.startTime = multiData.startTime
+
+            for (const [uuid, data] of Object.entries(multiData.players)) {
+
+                testedUsers = testedUsers.filter(item => item !== uuid)
+                added = false
+                for (let curUser of Object.values(multiplayer.roomUsers)) {
+                    if (curUser.uuid && curUser.uuid == uuid) {
+                        added = true;
+                        curUser.host = (uuid == multiData.host)
+                        curUser.score = 0;
+                        curUser.combo = 0;
+
+                        if (curUser.uuid == T.uuid) {
+                            multiplayer.isHost = curUser.host
+            
+                            if (!multiplayer.isHost) {
+                                Tt.mods.bpm = Number(multiData.mods.bpmMod)
+                                Tt.mods.hitWindow = Number(multiData.mods.hwMod)
+                                multiplayer.mapId = Number(multiData.mapId)
+                            }
+                            multiplayer.selMods.bpm = Tt.mods.bpm,
+                            multiplayer.selMods.hw = Tt.mods.hitWindow
+                        } else {
+                            curUser.ready = Boolean(data.ready)
+                        }
+                    }
+                }
+                if (!added) {
+                    multiplayer.roomUsers[uuid] = new MultiUser(uuid)
+                }
+            }
+
+            // Holy shit this shit is so fucking ass what the fuck was I cooking
+            // for (curUuid of testedUsers) {
+            //     for (curUser of multiplayer.roomUsers) {
+            //         if (curUser.uuid == curUuid) {
+
+            //         }
+            //     }
+            // }
         }
 
         //gets user data
-        for (const [uuid, data] of Object.entries(multiData[multiplayer.code].players)) {
-            added = false
-            for (curUser of multiplayer.roomUsers) {
-                if (curUser.uuid && curUser.uuid == uuid) {
-                    added = true
-                    curUser.score = Number(data.score)
-                    curUser.combo = Number(data.combo)
-                    curUser.host = Boolean(data.host)
-                    if (curUser.uuid != T.uuid) {
-                        curUser.ready = Boolean(data.ready)
-                    }
-                }
-            }
-            if (!added) {
-                multiplayer.roomUsers.push(new MultiUser(uuid))
-            }
-        }
+        // for (const [uuid, data] of Object.entries(multiData[multiplayer.code].players)) {
+        //     added = false
+        //     for (curUser of multiplayer.roomUsers) {
+        //         if (curUser.uuid && curUser.uuid == uuid) {
+        //             added = true
+        //             curUser.score = Number(data.score)
+        //             curUser.combo = Number(data.combo)
+        //             curUser.host = Boolean(data.host)
+        //             if (curUser.uuid != T.uuid) {
+        //                 curUser.ready = Boolean(data.ready)
+        //             }
+        //         }
+        //     }
+        //     if (!added) {
+        //         multiplayer.roomUsers.push(new MultiUser(uuid))
+        //     }
+        // }
 
-        for (let curUser of multiplayer.roomUsers) {
-            if (curUser.uuid == T.uuid) {
-                multiplayer.isHost = multiData[multiplayer.code].players[T.uuid].host
+        // for (let curUser of multiplayer.roomUsers) {
+        //     if (curUser.uuid == T.uuid) {
+        //         multiplayer.isHost = multiData[multiplayer.code].players[T.uuid].host
 
-                if (!multiplayer.isHost) {
-                    Tt.mods.bpm = Number(multiData[multiplayer.code].mods.bpmMod)
-                    Tt.mods.hitWindow = Number(multiData[multiplayer.code].mods.hwMod)
-                    multiplayer.mapId = Number(multiData[multiplayer.code].mapId)
-                }
-                multiplayer.selMods.bpm = Tt.mods.bpm,
-                multiplayer.selMods.hw = Tt.mods.hitWindow
-            }
-        }
+        //         if (!multiplayer.isHost) {
+        //             Tt.mods.bpm = Number(multiData[multiplayer.code].mods.bpmMod)
+        //             Tt.mods.hitWindow = Number(multiData[multiplayer.code].mods.hwMod)
+        //             multiplayer.mapId = Number(multiData[multiplayer.code].mapId)
+        //         }
+        //         multiplayer.selMods.bpm = Tt.mods.bpm,
+        //         multiplayer.selMods.hw = Tt.mods.hitWindow
+        //     }
+        // }
 
-        if (!multiplayer.isHost) {
+        // if (!multiplayer.isHost) {
 
-            if (Bt.screen == "lvl" && He == "menu") {
-                if (!v.newGrabbedLevels[multiplayer.mapId]) {
-                    B("newGrabLevelMeta", {
-                        mode: "id",
-                        a: multiplayer.mapId
-                    })
-                }
-                while (Rt.length > 1) { Rt.pop(0) }
-                Bt.lvl.search = "Wait For Host!"
-                Rt[0] = multiplayer.mapId
-            }
-        }
+        //     if (Bt.screen == "lvl" && He == "menu") {
+        //         if (!v.newGrabbedLevels[multiplayer.mapId]) {
+        //             B("newGrabLevelMeta", {
+        //                 mode: "id",
+        //                 a: multiplayer.mapId
+        //             })
+        //         }
+        //         while (Rt.length > 1) { Rt.pop(0) }
+        //         Bt.lvl.search = "Wait For Host!"
+        //         Rt[0] = multiplayer.mapId
+        //     }
+        // }
     }
 }
 );
@@ -216,12 +296,12 @@ function compareRank(a, b) {
 // v.newGLRequested[Rt[menu.lvl.sel]] = true
 // m(Rt[menu.lvl.sel], "id", true);
 
-multiplayer.roomUsers = [
+multiplayer.roomUsers = {
     // new MultiUser("dd48a6a6-e59c-46e6-96ca-f1e0f478154e"), // _t(Ut(T.uuid, "uuid").pp)
     // // new MultiUser("41ca407f-0732-4fa7-b62b-0bff8a20b07d"),
     // new MultiUser("ce2cee3b-c9fe-45ac-aba8-07d28fb8dd99"),
     // // new MultiUser("05d4ce4f-a3c1-4632-a792-6381ecece78e")
-]
+}
 F.en["settings_multiCode"] = "Multiplayer Room";
 F.en["settings_multiCode_sub"] = "Connect with other users using the same code";
 F.en["settings_multiConnect"] = "Refresh Connection";
@@ -240,39 +320,40 @@ F.en["multiplayer_selectError"] = "You cannot play multiplayer on a local map!"
 F.en["multiplayer_editError"] = "You cannot open the editor while in multiplayer!"
 F.en["multiplayer_playError"] = "You cannot play a local map while in multiplayer!"
 F.en["multiplayer_readyError"] = "Please wait for all players to ready first!"
+F.en["multiplayer_waiting"] = "Waiting for players..."
 
-Bt.settings.menu.pages[4].items.push({
-    type: "string",
-    var: [Bt.settings, "multiCode"],
-    name: "settings_multiCode",
-    hint: "settings_multiCode_sub",
-    allowEmpty: !0
-})
+// Bt.settings.menu.pages[4].items.push({
+//     type: "string",
+//     var: [Bt.settings, "multiCode"],
+//     name: "settings_multiCode",
+//     hint: "settings_multiCode_sub",
+//     allowEmpty: !0
+// })
 
-Bt.settings.menu.pages[4].items.push({
-    type: "button",
-    name: "settings_multiConnect",
-    hint: "settings_multiConnect_sub",
-    event: () => {
-        multiplayer.code = Bt.settings.multiCode
-        // Wait for connection, then send this
-        if (multiplayer.code == '') {
-            Gn({
-                type: "success",
-                message: "settings_multiConnect_single",
-                keys: []
-            });
-        } else {
-            multiplayer.roomUsers = []
-            serverframe.contentWindow.postMessage(`uuid=${T.uuid}&score=0&combo=0&lobbyName=${multiplayer.code}&bpmMod=${Tt.mods.bpm}&hwMod=${Tt.mods.hw}`, "*")
-            Gn({
-                type: "success",
-                message: "settings_multiConnect_refresh",
-                keys: [multiplayer.code, multiplayer.roomUsers.length, multiplayer.roomUsers.map(user => user.username).join(', ')]
-            });
-        }
-    }
-})
+// Bt.settings.menu.pages[4].items.push({
+//     type: "button",
+//     name: "settings_multiConnect",
+//     hint: "settings_multiConnect_sub",
+//     event: () => {
+//         multiplayer.code = Bt.settings.multiCode
+//         // Wait for connection, then send this
+//         if (multiplayer.code == '') {
+//             Gn({
+//                 type: "success",
+//                 message: "settings_multiConnect_single",
+//                 keys: []
+//             });
+//         } else {
+//             multiplayer.roomUsers = []
+//             serverframe.contentWindow.postMessage(`POST method=setMapData&uuid=${T.uuid}&lobbyName=${multiplayer.code}&bpmMod=${Tt.mods.bpm}&hwMod=${Tt.mods.hw}`, "*")
+//             Gn({
+//                 type: "success",
+//                 message: "settings_multiConnect_refresh",
+//                 keys: [multiplayer.code, multiplayer.roomUsers.length, multiplayer.roomUsers.map(user => user.username).join(', ')]
+//             });
+//         }
+//     }
+// })
 
 // !!! Navigation page
 Bt.nav.push(["menu_multiplayer_title", "multiplayer", "account"])
@@ -330,6 +411,16 @@ multiplayer.modsNSM.host = new Jo([{
         name: "mods_mirror",
         hint: "mods_mirror_sub",
         var: [Tt.mods, "mirror"]
+    }, {
+        type: "boolean",
+        name: "mods_noRelease",
+        hint: "mods_noRelease_sub",
+        var: [Tt.mods, "noRelease"]
+    }, {
+        type: "boolean",
+        name: "mods_flashlight",
+        hint: "mods_flashlight_sub",
+        var: [Tt.mods, "flashlight"]
     }, {
         type: "number",
         name: "mods_startPos",
@@ -392,6 +483,16 @@ multiplayer.modsNSM.player = new Jo([{
         hint: "mods_mirror_sub",
         var: [Tt.mods, "mirror"]
     }, {
+        type: "boolean",
+        name: "mods_noRelease",
+        hint: "mods_noRelease_sub",
+        var: [Tt.mods, "noRelease"]
+    }, {
+        type: "boolean",
+        name: "mods_flashlight",
+        hint: "mods_flashlight_sub",
+        var: [Tt.mods, "flashlight"]
+    }, {
         type: "number",
         name: "mods_offset",
         hint: "mods_offset_sub",
@@ -411,14 +512,14 @@ c.multiplayer = function () {
         // Show Users
         fill($.overlayShade),
         rect(0, height/16, width / 3, height),
-        multiplayer.roomUsers.sort(compareRank),
-        multiplayer.roomUsers.forEach((user, index) => {
-            user.drawLobby(width / 64, (height / 2) - (multiplayer.roomUsers.length * width / 45) + ((index) * (width / 22.5)) + (height / 16), (width / 3) - (width / 32))
+        tempUserDraw = Object.values(multiplayer.roomUsers).sort(compareRank),
+        tempUserDraw.forEach((user, index) => {
+            user.drawLobby(width / 64, (height / 2) - (Object.keys(multiplayer.roomUsers).length * width / 45) + ((index) * (width / 22.5)) + (height / 16), (width / 3) - (width / 32))
         }),
         fill(255),
         textAlign(CENTER, TOP),
         textSize(kt * 1.5),
-        text(Pt("multiplayer_menu_connected_users", xt, multiplayer.roomUsers.length), width / 6, height / 12);
+        text(Pt("multiplayer_menu_connected_users", xt, Object.keys(multiplayer.roomUsers).length), width / 6, height / 12);
 
         // Make sure level is downloaded
         if (!v.newGrabbedLevels[multiplayer.mapId]) {
@@ -597,7 +698,7 @@ c.pages = function() {
     rect(0, 0, width, ceil(height / 16)),
     stroke($.text),
     strokeWeight(height / lerp(128, 256, .25)),
-    // --- EDITED CODE
+    // --- EDITED CODE (Sets visuals of navbar to X while in multiplayer)
     go(height / 64, height / 64, Bt.side || multiplayer.code != ''),
     0 === T.uuid.length ? (fill(255),
     noStroke(),
@@ -654,11 +755,74 @@ c.pages = function() {
     }
 }
 
+cs.paused = function() {
+    var e, t, i;
+    Tt.paused ? (void 0 === Tt.pauseMillis && (Tt.pauseMillis = millis()),
+    cursor(),
+    i = t = e = 0,
+    i = Tt.retry ? (e = 1 + It(millis() - Tt.retryMillis, 500, -1, 26),
+    t = -width / 4 * 3,
+    lerp(200, 0, constrain((millis() - Tt.retryMillis) / 500, 0, 1))) : (t = !1 === Tt.resumeTime ? (e = It(millis() - Tt.pauseMillis, 750, 1, 26),
+    width / 4) : (e = 1 + It(millis() - Tt.resumeTime, 1500, -1, 26),
+    -width / 4 * 3),
+    lerp(0, 200, constrain((millis() - Tt.pauseMillis) / 500, 0, 1))),
+    rectMode(CORNER),
+    multiplayer.code == '' ? (
+    fill(0, i),
+    rect(0, 0, width, height),
+    fill(255, i),
+    textAlign(LEFT, TOP),
+    textSize(height / 64),
+    text(Pt("game_paused", xt), kt, kt),
+    noStroke(),
+    push(),
+    translate(lerp(-t, 0, e), 0),
+    Kt(width / 2 - width / 4 / 2, height / 2 - height / 8 / 2 - height / 8 * 1.25, width / 4, height / 8, Pt("game_continue", xt), Tt.buttonHover, 2),
+    Kt(width / 2 - width / 4 / 2, height / 2 - height / 8 / 2 + height / 8 * 1.25, width / 4, height / 8, Pt("game_backToMenu", xt), Tt.buttonHover, 1),
+    pop(),
+    push(),
+    translate(lerp(t, 0, e), 0),
+    Kt(width / 2 - width / 4 / 2, height / 2 - height / 8 / 2, width / 4, height / 8, Tt.replay.on ? Pt("game_replayRetry", xt) : Pt("game_retry", xt), Tt.buttonHover, 0),
+    pop(),
+    !1 !== Tt.resumeTime ? (void 0 === Tt.resumePos && (Tt.resumePos = 4),
+    Tt.resumePos += At(ceil(3 - (millis() - Tt.resumeTime) / 1e3), Tt.resumePos, .1),
+    textAlign(CENTER, CENTER),
+    fill(0, 175, 255),
+    textSize(height / 2),
+    Un(width / 2, height / 2, height / 3, .8, 4 - Tt.resumePos, [{
+        text: "",
+        color: color(255)
+    }, {
+        text: "3",
+        color: color(0, 175, 255)
+    }, {
+        text: "2",
+        color: color(0, 175, 255)
+    }, {
+        text: "1",
+        color: color(0, 175, 255)
+    }]),
+    ceil(3 - (millis() - Tt.resumeTime) / 1e3) <= 0 && (Tt.timeStart = millis(),
+    Tt.paused = !Tt.paused,
+    Tt.resumeTime = !1),
+    fill(255),
+    Dt(Pt("game_resuming", xt), width / 2, height / 4, width / 2 / 1.5, height / 2 / 1.5)) : Tt.resumePos = void 0) :
+    
+    // --- EDITED CODE (Blank retry screen during multiplayer)
+    (fill(0, 150),
+    rect(0, 0, width, height),
+    fill(255, 150),
+    textAlign(LEFT, TOP),
+    textSize(height / 64),
+    text(Pt("multiplayer_waiting", xt), kt, kt),
+    noStroke())) : Tt.pauseMillis = void 0
+}
+
 // !!! Disable score submission and show other players' score
 
 cs.resultsScreen = function() {
     var e = "" !== T.uuid && !Tt.failed && !Tt.mods.auto && H(Rt[Bt.lvl.sel], "id").ranked && !Tt.replay.on && 0 === Tt.mods.startPos && 0 === Tt.mods.endPos
-    , t = (!Tt.scoreSubmitted && e && (Tt.scoreSubmitted = !0), // --- EDITED CODE
+    , t = (!Tt.scoreSubmitted && e && (Tt.scoreSubmitted = !0), // --- EDITED CODE (Stop score submission)
     !1 === Tt.endMillis && (Tt.endMillis = millis()),
     Tt.scoreFinal = Gi(Tt.newScore.log),
     Ot(Tt.scoreFinal * wn(Tt.mods, !0)))
@@ -820,9 +984,9 @@ cs.resultsScreen = function() {
             color: on(a)
         })
     }
-    // --- EDITED CODE HERE
-    multiplayer.roomUsers.sort(compareScore),
-    multiplayer.roomUsers.forEach((user, index) => {
+    // --- EDITED CODE HERE (Show multiplayer scores on results)
+    tempUserDraw = Object.values(multiplayer.roomUsers).sort(compareScore),
+    tempUserDraw.forEach((user, index) => {
         user.draw(width / 2 - (width / 10) + (kt/16), (height / 2) + ((index - 2) * (height / 10)), width / 5)
     })
     o = height / 4 * 3 - 2 * kt,
@@ -1660,10 +1824,10 @@ cs.field.draw = function(A) {
             rect(kt, kt, T, H),
             Un((H - H / 1.5) / 2 + kt, H / 2 + kt, H / 1.5, 1, Tt.sectionCarouselIndex, ot)
         };
-        // --- EDITED CODE
-        multiplayer.roomUsers.sort(compareScore)
-        multiplayer.roomUsers.forEach((user, index) => {
-            user.draw(kt/16, (height / 2) - (multiplayer.roomUsers.length * width / 46) + ((index) * (width / 23)), width / 6)
+        // --- EDITED CODE (Show multiplayer scores in game)
+        tempUserDraw = Object.values(multiplayer.roomUsers).sort(compareScore),
+        tempUserDraw.forEach((user, index) => {
+            user.draw(kt/16, (height / 2) - (Object.keys(multiplayer.roomUsers).length * width / 46) + ((index) * (width / 23)), width / 6)
         })
     }
     if (!0 === Tt.edit) {
@@ -3267,7 +3431,7 @@ cs.field.draw = function(A) {
 // !!! Standardize mods
 
 function qi(e, t, i) {
-    // --- EDITED CODE
+    // --- EDITED CODE (Start map only if all users are ready)
     if (multiplayer.code != '') {
         Tt.mods.auto = false,
         Tt.mods.random = false,
@@ -3277,7 +3441,7 @@ function qi(e, t, i) {
         Tt.mods.startPos = 0,
         Tt.mods.endPos = 0
 
-        for (curUser of multiplayer.roomUsers) {
+        for (curUser of Object.values(multiplayer.roomUsers)) {
             if (!curUser.host && !curUser.ready && curUser.uuid != T.uuid) {
                 console.log(curUser)
                 Gn({
@@ -3349,16 +3513,18 @@ function qi(e, t, i) {
                 void 0 === Tt.sections[n].offset && (Tt.sections[n].offset = 0)
         }
     } else {
-        Tt.title = m(Rt[e], "id").title,
-        Tt.author = m(Rt[e], "id").author,
+        // --- EDITED CODE (Multiplayer lobbies to activate by ID directly)
+        multiplayer.code == '' ? curMapID = Rt[e] : curMapID = e
+        Tt.title = m(curMapID, "id").title,
+        Tt.author = m(curMapID, "id").author,
         Tt.beat = [],
-        Tt.bpm = m(Rt[e], "id").bpm;
-        for (n = 0; n < m(Rt[e], "id").beat.length; n++) {
+        Tt.bpm = m(curMapID, "id").bpm;
+        for (n = 0; n < m(curMapID, "id").beat.length; n++) {
             Tt.beat[n] = [];
-            for (s = 0; s < m(Rt[e], "id").beat[n].length; s++)
-                Tt.beat[n][s] = m(Rt[e], "id").beat[n][s];
+            for (s = 0; s < m(curMapID, "id").beat[n].length; s++)
+                Tt.beat[n][s] = m(curMapID, "id").beat[n][s];
             void 0 === Tt.beat[n][9] && (Tt.bpm = 120,
-            Tt.beat[n][9] = m(Rt[e], "id").bpm,
+            Tt.beat[n][9] = m(curMapID, "id").bpm,
             Tt.beat[n][1] = Tt.beat[n][1] * (120 / Tt.beat[n][9]),
             Tt.beat[n][6] = Tt.beat[n][6] * (120 / Tt.beat[n][9])),
             void 0 === Tt.beat[n][10] && (Tt.beat[n][10] = 0),
@@ -3366,42 +3532,42 @@ function qi(e, t, i) {
             void 0 !== Tt.beat[n][13] && null !== Tt.beat[n][13] || (Tt.beat[n][13] = 0),
             void 0 !== Tt.beat[n][14] && null !== Tt.beat[n][14] || (Tt.beat[n][14] = 3)
         }
-        if (Tt.oldAr = m(Rt[e], "id").ar,
-        Tt.hw = m(Rt[e], "id").hw,
-        Tt.hpD = m(Rt[e], "id").hpD,
-        Tt.song = m(Rt[e], "id").song,
-        Tt.bg = m(Rt[e], "id").bg,
-        Tt.songOffset = null === m(Rt[e], "id").songOffset ? 0 : m(Rt[e], "id").songOffset,
-        Tt.title = m(Rt[e], "id").title,
-        Tt.desc = m(Rt[e], "id").desc,
-        Tt.stars = Bn(Rt[e]),
-        Tt.gameVersion = m(Rt[e], "id").gameVersion,
+        if (Tt.oldAr = m(curMapID, "id").ar,
+        Tt.hw = m(curMapID, "id").hw,
+        Tt.hpD = m(curMapID, "id").hpD,
+        Tt.song = m(curMapID, "id").song,
+        Tt.bg = m(curMapID, "id").bg,
+        Tt.songOffset = null === m(curMapID, "id").songOffset ? 0 : m(curMapID, "id").songOffset,
+        Tt.title = m(curMapID, "id").title,
+        Tt.desc = m(curMapID, "id").desc,
+        Tt.stars = Bn(curMapID),
+        Tt.gameVersion = m(curMapID, "id").gameVersion,
         Tt.lvlSel = e,
-        void 0 === m(Rt[e], "id").effects || null === m(Rt[e], "id").effects)
+        void 0 === m(curMapID, "id").effects || null === m(curMapID, "id").effects)
             Tt.effects = [];
         else {
             Tt.effects = [];
-            for (n = 0; n < m(Rt[e], "id").effects.length; n++) {
+            for (n = 0; n < m(curMapID, "id").effects.length; n++) {
                 for (var r in Tt.effects[n] = [],
-                m(Rt[e], "id").effects[n])
-                    Tt.effects[n][r] = m(Rt[e], "id").effects[n][r];
+                m(curMapID, "id").effects[n])
+                    Tt.effects[n][r] = m(curMapID, "id").effects[n][r];
                 void 0 === Tt.effects[n].bpm && (Tt.bpm = 120,
-                Tt.effects[n].bpm = m(Rt[e], "id").bpm,
+                Tt.effects[n].bpm = m(curMapID, "id").bpm,
                 Tt.effects[n].time = Tt.effects[n].time * (120 / Tt.effects[n].bpm),
                 Tt.effects[n].moveTime = Tt.effects[n].moveTime * (120 / Tt.effects[n].bpm)),
                 void 0 === Tt.effects[n].offset && (Tt.effects[n].offset = 0)
             }
         }
-        if (void 0 === m(Rt[e], "id").sections || null === m(Rt[e], "id").sections)
+        if (void 0 === m(curMapID, "id").sections || null === m(curMapID, "id").sections)
             Tt.sections = [];
         else {
             Tt.sections = [];
-            for (n = 0; n < m(Rt[e], "id").sections.length; n++) {
+            for (n = 0; n < m(curMapID, "id").sections.length; n++) {
                 for (var r in Tt.sections[n] = [],
-                m(Rt[e], "id").sections[n])
-                    Tt.sections[n][r] = m(Rt[e], "id").sections[n][r];
+                m(curMapID, "id").sections[n])
+                    Tt.sections[n][r] = m(curMapID, "id").sections[n][r];
                 void 0 === Tt.sections[n].bpm && (Tt.bpm = 120,
-                Tt.sections[n].bpm = m(Rt[e], "id").bpm,
+                Tt.sections[n].bpm = m(curMapID, "id").bpm,
                 Tt.sections[n].time = Tt.sections[n].time * (120 / Tt.sections[n].bpm)),
                 void 0 === Tt.sections[n].offset && (Tt.sections[n].offset = 0)
             }
@@ -3478,7 +3644,7 @@ function qi(e, t, i) {
     Tt.transBackA = 255,
     Tt.board.str = 0,
     Tt.failed = !1,
-    Tt.paused = !1,
+    Tt.paused = (multiplayer.code == '' ? !1 : !0),
     Tt.playingOffset = 0,
     Tt.resumeTime = !1,
     Tt.playbackRate = 1,
@@ -3674,7 +3840,7 @@ fs.screens = function() {
                         Bt.lvl.showLeaderboard || Bt.lvl.showMods ? Bt.lvl.showLeaderboard && Ft("rcorner", width / 3 + kt + ((width / 3 * 2 - 2 * kt) / 2 + kt / 2), height / 16 + kt + ((height - height / 16) / 3 - 2 * kt) + kt + ((height - height / 16) / 3 - 2 * kt) + kt + (height - height / 16) / 3 / 3 * 2 + kt / 2, (width / 3 * 2 - 2 * kt) / 2 - kt / 2, (height - height / 16) / 3 / 3 - kt / 2) && (Bt.lvl.buttonHover[9] /= 2,
                         Bt.lvl.showLeaderboard = !Bt.lvl.showLeaderboard) : (Ft("rcorner", width / 3 + kt, height / 16 + kt + ((height - height / 16) / 3 - 2 * kt) + kt + ((height - height / 16) / 3 - 2 * kt) + kt, (width / 3 * 2 - 2 * kt) / 2 - kt / 2, (height - height / 16) / 3 / 3 * 2 - kt / 2) && (Tt.edit = !1,
                         Tt.replay.on = !1,
-                        // --- EDITED CODE
+                        // --- EDITED CODE (Stop host from choosing invalid songs)
                         multiplayer.code == '' ? qi(Bt.lvl.sel) : Gn({
                             type: "error",
                             message: "multiplayer_playError"
@@ -3715,12 +3881,12 @@ fs.screens = function() {
                             case 2:
                                 Tt.edit = !1,
                                 Tt.replay.on = !1,
-                                // --- EDITED CODE
+                                // --- EDITED CODE (Stop host from choosing local songs / select correct song)
                                 multiplayer.code == '' ? qi(Bt.lvl.sel) : Rt[Bt.lvl.sel]?.local ? Gn({
                                     type: "error",
                                     message: "multiplayer_selectError"
                                 })
-                                : (multiplayer.mapId = Rt[Bt.lvl.sel], Bt.trans = "multiplayer")
+                                : (multiplayer.mapId = Rt[Bt.lvl.sel], Bt.trans = "multiplayer", serverframe.contentWindow.postMessage(`POST method=setMapData&uuid=${T.uuid}&bpmMod=${Tt.mods.bpm}&hwMod=${Tt.mods.hitWindow}&mapId=${multiplayer.mapId}`, "*"))
                             }
                             Bt.lvl.buttonHover[4] /= 2
                         }
@@ -4022,7 +4188,7 @@ fs.screens = function() {
                 Bt.socialMedia.buttonHover[e] /= 2),
                 e++
             }
-        // --- EDITED CODE
+        // --- EDITED CODE (Clickable objects in multiplayer screen)
         } else if ("multiplayer" === Bt.screen) {
             var i = width > height ? width / 64 : height / 64;
             if (multiplayer.code == '') {
@@ -4033,10 +4199,10 @@ fs.screens = function() {
                     allowEmpty: !0,
                     after: function() {
                         if (multiplayer.code == '') {
-                            multiplayer.roomUsers = []
-                            console.log("Left room.")
+                            multiplayer.roomUsers = {}
+                            serverframe.contentWindow.postMessage(`POST method=logoff&uuid=${T.uuid}`, "*")
                         } else {
-                            console.log("Joined room.")
+                            serverframe.contentWindow.postMessage(`POST method=setLobby&uuid=${T.uuid}&lobbyName=${multiplayer.code}`, "*")
                         }
                     }
                 })
@@ -4046,9 +4212,9 @@ fs.screens = function() {
                         vt.callback?.();
                     else {
                         if (Ft("rcorner", width / 3 + kt + ((width / 3 * 2 - 2 * kt) / 2 + kt / 2), height / 16 + kt + ((height - height / 16) / 3 - 2 * kt) + kt + ((height - height / 16) / 3 - 2 * kt) + kt + (height - height / 16) / 3 / 3 * 2 + kt / 2 + ((height - height / 16) / 3 / 3 - kt / 2) / 4 * 3 - kt / 2, (width / 3 * 2 - 2 * kt) / 2 - kt / 2, ((height - height / 16) / 3 / 3 - kt / 2) / 2) && (Bt.lvl.buttonHover[11] /= 4,
-                        Bt.lvl.showMods = !Bt.lvl.showMods),
-                        Ft("rcorner", width / 3 + kt + ((width / 3 * 2 - 2 * kt) / 2 + kt / 2), height / 16 + kt + ((height - height / 16) / 3 - 2 * kt) + kt + ((height - height / 16) / 3 - 2 * kt) + kt + (height - height / 16) / 3 / 3 * 2 + kt / 2 + ((height - height / 16) / 3 / 3 - kt / 2) / 4 * 3 - kt / 2 - ((height - height / 16) / 3 / 3 - kt / 2) / 2 - kt / 2, (width / 3 * 2 - 2 * kt) / 2 - kt / 2, ((height - height / 16) / 3 / 3 - kt / 2) / 2) && (Bt.lvl.buttonHover[15] /= 4,
-                        vt.active = !0),
+                        Bt.lvl.showMods = !Bt.lvl.showMods, multiplayer.isHost ? serverframe.contentWindow.postMessage(`POST method=setMapData&uuid=${T.uuid}&bpmMod=${Tt.mods.bpm}&hwMod=${Tt.mods.hitWindow}&mapId=${multiplayer.mapId}`, "*") : void(0)),
+                        // Ft("rcorner", width / 3 + kt + ((width / 3 * 2 - 2 * kt) / 2 + kt / 2), height / 16 + kt + ((height - height / 16) / 3 - 2 * kt) + kt + ((height - height / 16) / 3 - 2 * kt) + kt + (height - height / 16) / 3 / 3 * 2 + kt / 2 + ((height - height / 16) / 3 / 3 - kt / 2) / 4 * 3 - kt / 2 - ((height - height / 16) / 3 / 3 - kt / 2) / 2 - kt / 2, (width / 3 * 2 - 2 * kt) / 2 - kt / 2, ((height - height / 16) / 3 / 3 - kt / 2) / 2) && (Bt.lvl.buttonHover[15] /= 4,
+                        // vt.active = !0),
                         Ft("rcorner", width / 3 + kt, height / 16 + kt + ((height - height / 16) / 3 - 2 * kt) + kt + ((height - height / 16) / 3 - 2 * kt) + kt + (height - height / 16) / 3 / 3 * 2 + kt / 2 + ((height - height / 16) / 3 / 3 - kt / 2) / 4 * 3 - kt / 2, (width / 3 * 2 - 2 * kt) / 2 - kt / 2, ((height - height / 16) / 3 / 3 - kt / 2) / 2))
                             for (var t in Bt.lvl.buttonHover[13] /= 4,
                             Tt.modsDef)
@@ -4056,23 +4222,6 @@ fs.screens = function() {
                         multiplayer.isHost ? multiplayer.modsNSM.host.click() : multiplayer.modsNSM.player.click()
                     }
                 else {
-                    Ft("rcorner", width * 5 / 8, height * 4 / 16, width / 3, height / 16) && Ri({
-                        var: [multiplayer, "code"],
-                        title: "menu_lvl_search",
-                        type: "string",
-                        allowEmpty: !0,
-                        after: function() {
-                            if (multiplayer.code == '') {
-                                multiplayer.roomUsers = []
-                                console.log("Left room.")
-                            } else {
-                                console.log("Joined room.")
-                            }
-                        }
-                    }),
-                    // Ft("rcorner", width * 5 / 8, height * 12 / 16, width / 3, height / 16) && (
-                    //     v.newGrabbedLevels[multiplayer.mapId] ? multiplayer.ready = !multiplayer.ready : multiplayer.ready = false
-                    // );
                     multiplayer.isHost ?
                         (Ft("rcorner", width / 3 + i, height / 16 + i + ((height - height / 16) / 3 - 2 * i) + i + ((height - height / 16) / 3 - 2 * i) + i + (height - height / 16) / 3 / 3 * 2 + i / 2, (width / 3 * 2 - 4 * i) / 3, (height - height / 16) / 3 / 3 - i / 2) && (Bt.lvl.buttonHover[11] /= 4, console.log("Spectating activation here.")),
                         Ft("rcorner", width / 3 + 2 * i + (width / 3 * 2 - 4 * i) / 3, height / 16 + i + ((height - height / 16) / 3 - 2 * i) + i + ((height - height / 16) / 3 - 2 * i) + i + (height - height / 16) / 3 / 3 * 2 + i / 2, (width / 3 * 2 - 4 * i) / 3, (height - height / 16) / 3 / 3 - i / 2) && (console.log("hi"), Bt.lvl.buttonHover[12] /= 4, Bt.lvl.showMods = true),
@@ -4093,14 +4242,15 @@ fs.screens = function() {
                             Tt.replay.on = !1,
                             console.log(multiplayer.ready);
                             if (multiplayer.isHost) {
-                                qi(multiplayer.mapId)
+                                serverframe.contentWindow.postMessage(`POST method=setStartTime&uuid=${T.uuid}`, "*")
                             } else {
                                 multiplayer.ready = !multiplayer.ready;
-                                for (curUser of multiplayer.roomUsers) {
+                                for (curUser of Object.values(multiplayer.roomUsers)) {
                                     if (curUser.uuid == T.uuid) {
                                         curUser.ready = multiplayer.ready
                                     }
                                 }
+                                serverframe.contentWindow.postMessage(`POST method=setReady&uuid=${T.uuid}&ready=${multiplayer.ready}`, "*")
                             }
                         }
                         Bt.lvl.buttonHover[4] /= 2
@@ -4222,8 +4372,10 @@ fs.screens = function() {
                     Tt.exiting = !1)) : (Tt.menuNSM.click(),
                     Ft("rcorner", width / Tt.tools.length * (Tt.tools.length - 1), height - height / 16 * Tt.headerY, width / Tt.tools.length, height / 16 * -(Tt.toolsH + 1)) && (Tt.menu = !1))
             } else
+            if (multiplayer.code == '') {
                 Tt.paused && 1 === Tt.disMode && !1 === Tt.resumeTime && (Ft("rcorner", width / 2 - width / 4 / 2, height / 2 - height / 8 / 2 - height / 8 * 1.25, width / 4, height / 8) ? Mn("continue") : Ft("rcorner", width / 2 - width / 4 / 2, height / 2 - height / 8 / 2, width / 4, height / 8) && Mn("retry"),
                 Ft("rcorner", width / 2 - width / 4 / 2, height / 2 - height / 8 / 2 + height / 8 * 1.25, width / 4, height / 8)) && Mn("menu");
+            }
         2 === Tt.disMode && !1 === Tt.edit && (Ft("rcorner", width / 3 * 2 + kt, height - height / 8 - kt, width / 3 - 2 * kt, height / 8) ? Mn("menu") : Ft("rcorner", width / 3 * 2 + kt, height - height / 8 * 2 - 2 * kt, width / 3 - 2 * kt, height / 8) ? Mn("retry") : Tt.performanceDotCallback && Tt.performanceDotCallback())
     }
 }
@@ -4373,11 +4525,11 @@ fs.screens.logo = function() {
 }
 ,
 fs.screens.header = function() {
-    // --- EDITED CODE
+    // --- EDITED CODE (X to leave lobby in multiplayer lobby)
     if (multiplayer.code == '') {
         Ft("rcorner", height / 64 - height / 128 / 4, height / 64 - height / 128 / 4, height / 32 + height / 128 / 2, height / 32 + height / 128 / 2) && (Bt.side = !Bt.side)
     } else {
-        Ft("rcorner", height / 64 - height / 128 / 4, height / 64 - height / 128 / 4, height / 32 + height / 128 / 2, height / 32 + height / 128 / 2) && (multiplayer.code = '', multiplayer.roomUsers = [])
+        Ft("rcorner", height / 64 - height / 128 / 4, height / 64 - height / 128 / 4, height / 32 + height / 128 / 2, height / 32 + height / 128 / 2) && (multiplayer.code = '', multiplayer.roomUsers = {}, serverframe.contentWindow.postMessage(`POST method=logoff&uuid=${T.uuid}`, "*"))
     }
 }
 ,
@@ -4492,7 +4644,7 @@ function Yo(e) {
             Kt(width / 3 + 2 * i + (width / 3 * 2 - 4 * i) / 3, height / 16 + i + ((height - height / 16) / 3 - 2 * i) + i + ((height - height / 16) / 3 - 2 * i) + i + (height - height / 16) / 3 / 3 * 2 + i / 2, (width / 3 * 2 - 4 * i) / 3, (height - height / 16) / 3 / 3 - i / 2, Pt("menu_lvl_mods", xt), Bt.lvl.buttonHover, 12),
             void 0 === Rt[z].copy ? Kt(width / 3 + 3 * i + (width / 3 * 2 - 4 * i) / 3 * 2, height / 16 + i + ((height - height / 16) / 3 - 2 * i) + i + ((height - height / 16) / 3 - 2 * i) + i + (height - height / 16) / 3 / 3 * 2 + i / 2, (width / 3 * 2 - 4 * i) / 3, (height - height / 16) / 3 / 3 - i / 2, Pt("menu_lvl_upload", xt), Bt.lvl.buttonHover, 3) : void 0 !== Rt[z].copy && Rt[z].author === T.uuid ? Kt(width / 3 + 3 * i + (width / 3 * 2 - 4 * i) / 3 * 2, height / 16 + i + ((height - height / 16) / 3 - 2 * i) + i + ((height - height / 16) / 3 - 2 * i) + i + (height - height / 16) / 3 / 3 * 2 + i / 2, (width / 3 * 2 - 4 * i) / 3, (height - height / 16) / 3 / 3 - i / 2, Pt("menu_lvl_uploadCopy", xt), Bt.lvl.buttonHover, 3) : (fill(255),
             Dt(Pt("menu_lvl_notUploadCopy", xt), width / 3 + 3 * i + (width / 3 * 2 - 4 * i) / 3 * 2 + (width / 3 * 2 - 4 * i) / 3 / 2, height / 16 + i + ((height - height / 16) / 3 - 2 * i) + i + ((height - height / 16) / 3 - 2 * i) + i + (height - height / 16) / 3 / 3 * 2 + i / 2 + ((height - height / 16) / 3 / 3 - i / 2) / 2, (width / 3 * 2 - 4 * i) / 3, (height - height / 16) / 3 / 3 - i / 2))) : (h = qo(Rt[z]),
-            // --- EDITED CODE
+            // --- EDITED CODE (Button visuals for choosing a map in multiplayer)
             Kt(width / 3 + i, height / 16 + i + ((height - height / 16) / 3 - 2 * i) + i + ((height - height / 16) / 3 - 2 * i) + i, width / 3 * 2 - 2 * i, (height - height / 16) / 3 / 3 * 2 - i / 2, Pt(0 === h ? "menu_download" : 2 === h ? multiplayer.code != '' ? "multiplayer_menu_select" : "menu_lvl_play" : "menu_downloading", xt), Bt.lvl.buttonHover, 4),
             Kt(width / 3 + i, height / 16 + i + ((height - height / 16) / 3 - 2 * i) + i + ((height - height / 16) / 3 - 2 * i) + i + (height - height / 16) / 3 / 3 * 2 + i / 2, (width / 3 * 2 - 4 * i) / 3, (height - height / 16) / 3 / 3 - i / 2, -1 !== Ht.saved.indexOf(Rt[z]) ? Pt("menu_lvl_unbookmark", xt) : Pt("menu_lvl_bookmark", xt), Bt.lvl.buttonHover, 5),
             Kt(width / 3 + 2 * i + (width / 3 * 2 - 4 * i) / 3, height / 16 + i + ((height - height / 16) / 3 - 2 * i) + i + ((height - height / 16) / 3 - 2 * i) + i + (height - height / 16) / 3 / 3 * 2 + i / 2, (width / 3 * 2 - 4 * i) / 3, (height - height / 16) / 3 / 3 - i / 2, Pt("menu_lvl_mods", xt), Bt.lvl.buttonHover, 10),
