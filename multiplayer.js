@@ -46,10 +46,12 @@ testInterval = setInterval(() => {
                 Tt.edit = false,
                 Tt.replay.on = false,
                 qi(0)
+                Tt.paused = true
                 
                 setTimeout(() => {
                     Mn("retry")
                     mapStarting = false
+                    //Tt.paused = false
                 }, multiplayer.startTime - Date.now())
             }
 
@@ -3666,7 +3668,7 @@ function qi(e, t, i) {
     Tt.transBackA = 255,
     Tt.board.str = 0,
     Tt.failed = !1,
-    Tt.paused = (multiplayer.code == '' ? !1 : !0),
+    Tt.paused = false,
     Tt.playingOffset = 0,
     Tt.resumeTime = !1,
     Tt.playbackRate = 1,
