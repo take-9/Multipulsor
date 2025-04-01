@@ -28,6 +28,8 @@ let serverframe = document.createElement("iframe");
 serverframe.src = "https://172.104.10.6/Server.html";
 document.children[0].appendChild(serverframe);
 
+mapStarting = false
+
 testInterval = setInterval(() => {
     if (multiplayer.code != '' && serverframe.contentWindow) {
         if (Tt.disMode == 1 && He === "game") {
@@ -35,20 +37,33 @@ testInterval = setInterval(() => {
             serverframe.contentWindow.postMessage(`GET method=getScoreboard&lobbyName=${multiplayer.code}`, "*");
         } else if (Bt.screen == "multiplayer") {
             serverframe.contentWindow.postMessage(`GET method=getLobbyData&lobbyName=${multiplayer.code}`, "*");
+
+            if (!mapStarting && Date.now() < multiplayer.startTime) {
+                mapStarting = true
+
+                Rt[0] = multiplayer.mapId
+        
+                Tt.edit = false,
+                Tt.replay.on = false,
+                qi(0)
+                
+                setTimeout(() => {
+                    Mn("retry")
+                    mapStarting = false
+                }, multiplayer.startTime - Date.now())
+            }
+
+
         }
         // serverframe.contentWindow.postMessage(`uuid=${T.uuid}&score=${Math.floor(Tt.scoreFinal) ?? 0}&combo=${Tt.combo ?? 0}&lobbyName=${multiplayer.code}&bpmMod=${Tt.mods.bpm ?? 1}
         // &hwMod=${Tt.mods.hitWindow ?? 1}&mapId=${multiplayer.mapId ?? 10436}&ready=${multiplayer.ready ?? false}`, "*") // selLevel
     }
 }, 500)
 
+//DIRTPILLAR
 startMatch = setInterval(() => {
-    if (multiplayer.code != '' && multiplayer.startTime > Date.now() && He != "game" && Tt.disMode != 1) {
-        qi(multiplayer.mapId)
-        setTimeout(() => {
-            Mn("retry")
-        }, multiplayer.startTime - Date.now())
-    }
-}, 500) 
+
+}, 500)
 
 // Logoff if user leaves site without hitting the x
 window.addEventListener('beforeunload', function(event) {
@@ -82,8 +97,15 @@ test = window.addEventListener("message", function(event) {
             }
 
         } else if (multiData.method == "getLobbyData") {
-
             if (multiData.mapId != multiplayer.mapId) {
+                // while (Rt.length > 1) { 
+                //     Rt.pop(0) 
+                // }
+                
+                console.log("new map data")
+
+                Bt.lvl.search = "Wait For Host!"
+                Rt[0] = multiplayer.mapId
                 multiplayer.ready = false
             }
 
@@ -3515,17 +3537,16 @@ function qi(e, t, i) {
                 void 0 === Tt.sections[n].offset && (Tt.sections[n].offset = 0)
         }
     } else {
-        curMapId = (multiplayer.code == '' ? Rt[e] : e)
-        Tt.title = m(curMapId, "id").title,
-        Tt.author = m(curMapId, "id").author,
+        Tt.title = m(Rt[e], "id").title,
+        Tt.author = m(Rt[e], "id").author,
         Tt.beat = [],
-        Tt.bpm = m(curMapId, "id").bpm;
-        for (n = 0; n < m(curMapId, "id").beat.length; n++) {
+        Tt.bpm = m(Rt[e], "id").bpm;
+        for (n = 0; n < m(Rt[e], "id").beat.length; n++) {
             Tt.beat[n] = [];
-            for (s = 0; s < m(curMapId, "id").beat[n].length; s++)
-                Tt.beat[n][s] = m(curMapId, "id").beat[n][s];
+            for (s = 0; s < m(Rt[e], "id").beat[n].length; s++)
+                Tt.beat[n][s] = m(Rt[e], "id").beat[n][s];
             void 0 === Tt.beat[n][9] && (Tt.bpm = 120,
-            Tt.beat[n][9] = m(curMapId, "id").bpm,
+            Tt.beat[n][9] = m(Rt[e], "id").bpm,
             Tt.beat[n][1] = Tt.beat[n][1] * (120 / Tt.beat[n][9]),
             Tt.beat[n][6] = Tt.beat[n][6] * (120 / Tt.beat[n][9])),
             void 0 === Tt.beat[n][10] && (Tt.beat[n][10] = 0),
@@ -3533,42 +3554,42 @@ function qi(e, t, i) {
             void 0 !== Tt.beat[n][13] && null !== Tt.beat[n][13] || (Tt.beat[n][13] = 0),
             void 0 !== Tt.beat[n][14] && null !== Tt.beat[n][14] || (Tt.beat[n][14] = 3)
         }
-        if (Tt.oldAr = m(curMapId, "id").ar,
-        Tt.hw = m(curMapId, "id").hw,
-        Tt.hpD = m(curMapId, "id").hpD,
-        Tt.song = m(curMapId, "id").song,
-        Tt.bg = m(curMapId, "id").bg,
-        Tt.songOffset = null === m(curMapId, "id").songOffset ? 0 : m(curMapId, "id").songOffset,
-        Tt.title = m(curMapId, "id").title,
-        Tt.desc = m(curMapId, "id").desc,
-        Tt.stars = Bn(curMapId), // SCARY!!
-        Tt.gameVersion = m(curMapId, "id").gameVersion,
+        if (Tt.oldAr = m(Rt[e], "id").ar,
+        Tt.hw = m(Rt[e], "id").hw,
+        Tt.hpD = m(Rt[e], "id").hpD,
+        Tt.song = m(Rt[e], "id").song,
+        Tt.bg = m(Rt[e], "id").bg,
+        Tt.songOffset = null === m(Rt[e], "id").songOffset ? 0 : m(Rt[e], "id").songOffset,
+        Tt.title = m(Rt[e], "id").title,
+        Tt.desc = m(Rt[e], "id").desc,
+        Tt.stars = Bn(Rt[e]), // SCARY!!
+        Tt.gameVersion = m(Rt[e], "id").gameVersion,
         Tt.lvlSel = e,
-        void 0 === m(curMapId, "id").effects || null === m(curMapId, "id").effects)
+        void 0 === m(Rt[e], "id").effects || null === m(Rt[e], "id").effects)
             Tt.effects = [];
         else {
             Tt.effects = [];
-            for (n = 0; n < m(curMapId, "id").effects.length; n++) {
+            for (n = 0; n < m(Rt[e], "id").effects.length; n++) {
                 for (var r in Tt.effects[n] = [],
-                m(curMapId, "id").effects[n])
-                    Tt.effects[n][r] = m(curMapId, "id").effects[n][r];
+                m(Rt[e], "id").effects[n])
+                    Tt.effects[n][r] = m(Rt[e], "id").effects[n][r];
                 void 0 === Tt.effects[n].bpm && (Tt.bpm = 120,
-                Tt.effects[n].bpm = m(curMapId, "id").bpm,
+                Tt.effects[n].bpm = m(Rt[e], "id").bpm,
                 Tt.effects[n].time = Tt.effects[n].time * (120 / Tt.effects[n].bpm),
                 Tt.effects[n].moveTime = Tt.effects[n].moveTime * (120 / Tt.effects[n].bpm)),
                 void 0 === Tt.effects[n].offset && (Tt.effects[n].offset = 0)
             }
         }
-        if (void 0 === m(curMapId, "id").sections || null === m(curMapId, "id").sections)
+        if (void 0 === m(Rt[e], "id").sections || null === m(Rt[e], "id").sections)
             Tt.sections = [];
         else {
             Tt.sections = [];
-            for (n = 0; n < m(curMapId, "id").sections.length; n++) {
+            for (n = 0; n < m(Rt[e], "id").sections.length; n++) {
                 for (var r in Tt.sections[n] = [],
-                m(curMapId, "id").sections[n])
-                    Tt.sections[n][r] = m(curMapId, "id").sections[n][r];
+                m(Rt[e], "id").sections[n])
+                    Tt.sections[n][r] = m(Rt[e], "id").sections[n][r];
                 void 0 === Tt.sections[n].bpm && (Tt.bpm = 120,
-                Tt.sections[n].bpm = m(curMapId, "id").bpm,
+                Tt.sections[n].bpm = m(Rt[e], "id").bpm,
                 Tt.sections[n].time = Tt.sections[n].time * (120 / Tt.sections[n].bpm)),
                 void 0 === Tt.sections[n].offset && (Tt.sections[n].offset = 0)
             }
@@ -3799,6 +3820,7 @@ function qi(e, t, i) {
     !(Tt.submittedScore = null) !== i && (Vi("game", "menu"),
     Bt.lvl.loading = !0)
 }
+
 
 // !!! Add fs.screens
 
