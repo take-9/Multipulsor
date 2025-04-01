@@ -42,8 +42,8 @@ testInterval = setInterval(() => {
 }, 500)
 
 startMatch = setInterval(() => {
-    if (multiplayer.code != '' && multiplayer.startTime > Date.now() && He != "menu" && Tt.disMode != 1) {
-        qi(Bt.lvl.sel)
+    if (multiplayer.code != '' && multiplayer.startTime > Date.now() && He != "game" && Tt.disMode != 1) {
+        qi(multiplayer.mapId)
         setTimeout(() => {
             Mn("retry")
         }, multiplayer.startTime - Date.now())
@@ -62,7 +62,7 @@ test = window.addEventListener("message", function(event) {
         
         if (multiData.method == "getScoreboard") {
             
-            for (const [uuid, data] of Object.entries(multiData.players)) {
+            for (const [uuid, data] of Object.entries(multiData.scores)) {
                 if (uuid in multiplayer.roomUsers) {
                     multiplayer.roomUsers[uuid].score = Number(data.score)
                     multiplayer.roomUsers[uuid].combo = Number(data.combo)
@@ -90,33 +90,34 @@ test = window.addEventListener("message", function(event) {
             multiplayer.startTime = multiData.startTime
 
             for (const [uuid, data] of Object.entries(multiData.players)) {
-
-                testedUsers = testedUsers.filter(item => item !== uuid)
-                added = false
-                for (let curUser of Object.values(multiplayer.roomUsers)) {
-                    if (curUser.uuid && curUser.uuid == uuid) {
-                        added = true;
-                        curUser.host = (uuid == multiData.host)
-                        curUser.score = 0;
-                        curUser.combo = 0;
-
-                        if (curUser.uuid == T.uuid) {
-                            multiplayer.isHost = curUser.host
-            
-                            if (!multiplayer.isHost) {
-                                Tt.mods.bpm = Number(multiData.mods.bpmMod)
-                                Tt.mods.hitWindow = Number(multiData.mods.hwMod)
-                                multiplayer.mapId = Number(multiData.mapId)
-                            }
-                            multiplayer.selMods.bpm = Tt.mods.bpm,
-                            multiplayer.selMods.hw = Tt.mods.hitWindow
-                        } else {
-                            curUser.ready = Boolean(data.ready)
-                        }
+                if (uuid in multiplayer.roomUsers) {
+                    multiplayer.roomUsers[uuid].score = 0
+                    multiplayer.roomUsers[uuid].combo = 0
+                    multiplayer.roomUsers[uuid].host = (uuid == multiData.host)
+                    multiplayer.isHost = (T.uuid == multiData.host)
+                    if (uuid != T.uuid) {
+                        multiplayer.roomUsers[uuid].ready = (data.ready)
                     }
-                }
-                if (!added) {
+                    if (!multiplayer.isHost) {
+                        Tt.mods.bpm = Number(multiData.mods.bpmMod)
+                        Tt.mods.hitWindow = Number(multiData.mods.hwMod)
+                        multiplayer.mapId = Number(multiData.mapId)
+                    }
+                    multiplayer.selMods.bpm = Tt.mods.bpm,
+                    multiplayer.selMods.hw = Tt.mods.hitWindow
+                } else {
                     multiplayer.roomUsers[uuid] = new MultiUser(uuid)
+                }
+            }
+
+            i = 0
+            const uuids = Object.keys(multiplayer.roomUsers)
+            while (i < uuids.length) {
+                if (uuids[i] in multiData.players) {
+                    i++
+                } else {
+                    delete multiplayer.roomUsers[uuids[i]]
+                    uuids.splice(i, 1);
                 }
             }
 
@@ -3459,7 +3460,8 @@ function qi(e, t, i) {
     Bt.lvl.sel = e,
     Bt.lvl.search = ""),
     Tt.timelineBPM = !1,
-    !(Tt.timelineOffset = !1) === Rt[e].local) {
+    Tt.timelineOffset = !1,
+    !(multiplayer.code !== "") === Rt[e]?.local) {
         Tt.title = Rt[e].title,
         Tt.author = Rt[e].author,
         Tt.bpm = Rt[e].bpm;
@@ -3490,7 +3492,7 @@ function qi(e, t, i) {
         Tt.songOffset = void 0 === Rt[e].songOffset ? 0 : Rt[e].songOffset,
         Tt.title = Rt[e].title,
         Tt.desc = Rt[e].desc,
-        Tt.stars = Bn(Rt[e]),
+        Tt.stars = Bn(Rt[e]), // SCARY!!
         Tt.gameVersion = Rt[e].gameVersion,
         Tt.lvlSel = e,
         Tt.effects = [],
@@ -3513,18 +3515,17 @@ function qi(e, t, i) {
                 void 0 === Tt.sections[n].offset && (Tt.sections[n].offset = 0)
         }
     } else {
-        // --- EDITED CODE (Multiplayer lobbies to activate by ID directly)
-        multiplayer.code == '' ? curMapID = Rt[e] : curMapID = e
-        Tt.title = m(curMapID, "id").title,
-        Tt.author = m(curMapID, "id").author,
+        curMapId = (multiplayer.code == '' ? Rt[e] : e)
+        Tt.title = m(curMapId, "id").title,
+        Tt.author = m(curMapId, "id").author,
         Tt.beat = [],
-        Tt.bpm = m(curMapID, "id").bpm;
-        for (n = 0; n < m(curMapID, "id").beat.length; n++) {
+        Tt.bpm = m(curMapId, "id").bpm;
+        for (n = 0; n < m(curMapId, "id").beat.length; n++) {
             Tt.beat[n] = [];
-            for (s = 0; s < m(curMapID, "id").beat[n].length; s++)
-                Tt.beat[n][s] = m(curMapID, "id").beat[n][s];
+            for (s = 0; s < m(curMapId, "id").beat[n].length; s++)
+                Tt.beat[n][s] = m(curMapId, "id").beat[n][s];
             void 0 === Tt.beat[n][9] && (Tt.bpm = 120,
-            Tt.beat[n][9] = m(curMapID, "id").bpm,
+            Tt.beat[n][9] = m(curMapId, "id").bpm,
             Tt.beat[n][1] = Tt.beat[n][1] * (120 / Tt.beat[n][9]),
             Tt.beat[n][6] = Tt.beat[n][6] * (120 / Tt.beat[n][9])),
             void 0 === Tt.beat[n][10] && (Tt.beat[n][10] = 0),
@@ -3532,42 +3533,42 @@ function qi(e, t, i) {
             void 0 !== Tt.beat[n][13] && null !== Tt.beat[n][13] || (Tt.beat[n][13] = 0),
             void 0 !== Tt.beat[n][14] && null !== Tt.beat[n][14] || (Tt.beat[n][14] = 3)
         }
-        if (Tt.oldAr = m(curMapID, "id").ar,
-        Tt.hw = m(curMapID, "id").hw,
-        Tt.hpD = m(curMapID, "id").hpD,
-        Tt.song = m(curMapID, "id").song,
-        Tt.bg = m(curMapID, "id").bg,
-        Tt.songOffset = null === m(curMapID, "id").songOffset ? 0 : m(curMapID, "id").songOffset,
-        Tt.title = m(curMapID, "id").title,
-        Tt.desc = m(curMapID, "id").desc,
-        Tt.stars = Bn(curMapID),
-        Tt.gameVersion = m(curMapID, "id").gameVersion,
+        if (Tt.oldAr = m(curMapId, "id").ar,
+        Tt.hw = m(curMapId, "id").hw,
+        Tt.hpD = m(curMapId, "id").hpD,
+        Tt.song = m(curMapId, "id").song,
+        Tt.bg = m(curMapId, "id").bg,
+        Tt.songOffset = null === m(curMapId, "id").songOffset ? 0 : m(curMapId, "id").songOffset,
+        Tt.title = m(curMapId, "id").title,
+        Tt.desc = m(curMapId, "id").desc,
+        Tt.stars = Bn(curMapId), // SCARY!!
+        Tt.gameVersion = m(curMapId, "id").gameVersion,
         Tt.lvlSel = e,
-        void 0 === m(curMapID, "id").effects || null === m(curMapID, "id").effects)
+        void 0 === m(curMapId, "id").effects || null === m(curMapId, "id").effects)
             Tt.effects = [];
         else {
             Tt.effects = [];
-            for (n = 0; n < m(curMapID, "id").effects.length; n++) {
+            for (n = 0; n < m(curMapId, "id").effects.length; n++) {
                 for (var r in Tt.effects[n] = [],
-                m(curMapID, "id").effects[n])
-                    Tt.effects[n][r] = m(curMapID, "id").effects[n][r];
+                m(curMapId, "id").effects[n])
+                    Tt.effects[n][r] = m(curMapId, "id").effects[n][r];
                 void 0 === Tt.effects[n].bpm && (Tt.bpm = 120,
-                Tt.effects[n].bpm = m(curMapID, "id").bpm,
+                Tt.effects[n].bpm = m(curMapId, "id").bpm,
                 Tt.effects[n].time = Tt.effects[n].time * (120 / Tt.effects[n].bpm),
                 Tt.effects[n].moveTime = Tt.effects[n].moveTime * (120 / Tt.effects[n].bpm)),
                 void 0 === Tt.effects[n].offset && (Tt.effects[n].offset = 0)
             }
         }
-        if (void 0 === m(curMapID, "id").sections || null === m(curMapID, "id").sections)
+        if (void 0 === m(curMapId, "id").sections || null === m(curMapId, "id").sections)
             Tt.sections = [];
         else {
             Tt.sections = [];
-            for (n = 0; n < m(curMapID, "id").sections.length; n++) {
+            for (n = 0; n < m(curMapId, "id").sections.length; n++) {
                 for (var r in Tt.sections[n] = [],
-                m(curMapID, "id").sections[n])
-                    Tt.sections[n][r] = m(curMapID, "id").sections[n][r];
+                m(curMapId, "id").sections[n])
+                    Tt.sections[n][r] = m(curMapId, "id").sections[n][r];
                 void 0 === Tt.sections[n].bpm && (Tt.bpm = 120,
-                Tt.sections[n].bpm = m(curMapID, "id").bpm,
+                Tt.sections[n].bpm = m(curMapId, "id").bpm,
                 Tt.sections[n].time = Tt.sections[n].time * (120 / Tt.sections[n].bpm)),
                 void 0 === Tt.sections[n].offset && (Tt.sections[n].offset = 0)
             }
