@@ -22,6 +22,11 @@ multiplayer = {
     startTime: 0
 }
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+
 // !!! Server Stuffs
 
 let serverframe = document.createElement("iframe");
@@ -40,12 +45,12 @@ testInterval = setInterval(() => {
 
             if (!mapStarting && Date.now() < multiplayer.startTime) {
                 mapStarting = true
-
-                Rt[0] = multiplayer.mapId
         
+                Bt.screen = "lvl"
                 Tt.edit = false,
                 Tt.replay.on = false,
                 Ht.search = [multiplayer.mapId]
+                Bt.lvl.sel = 0
                 qi(0)
                 Tt.paused = true
                 
@@ -61,11 +66,6 @@ testInterval = setInterval(() => {
         // serverframe.contentWindow.postMessage(`uuid=${T.uuid}&score=${Math.floor(Tt.scoreFinal) ?? 0}&combo=${Tt.combo ?? 0}&lobbyName=${multiplayer.code}&bpmMod=${Tt.mods.bpm ?? 1}
         // &hwMod=${Tt.mods.hitWindow ?? 1}&mapId=${multiplayer.mapId ?? 10436}&ready=${multiplayer.ready ?? false}`, "*") // selLevel
     }
-}, 500)
-
-//DIRTPILLAR
-startMatch = setInterval(() => {
-
 }, 500)
 
 // Logoff if user leaves site without hitting the x
@@ -842,6 +842,26 @@ cs.paused = function() {
     textSize(height / 64),
     text(Pt("multiplayer_waiting", xt), kt, kt),
     noStroke())) : Tt.pauseMillis = void 0
+}
+Mn = function(e) {
+    switch (e) {
+    case "menu":
+        Bt.lvl.prevPlay = Tt.song,
+        Bt.lvl.loading = !1,
+        Tt.buttonHover[1] /= 2,
+        Tt.replay.on && Yn(Tt.replay.preMods),
+        Vi("menu", "game");
+        break;
+    case "retry":
+        Tt.disMode = Tt.paused ? 1 : 3,
+        Tt.retry = !0,
+        Tt.buttonHover[0] /= 2,
+        Bt.lvl.prevPlay = Tt.song,
+        Tt.songVol = 100;
+        break;
+    case "continue":
+        !1 === Tt.resumeTime ? Tt.resumeTime = millis() : Tt.resumeTime = !1
+    }
 }
 
 // !!! Disable score submission and show other players' score
