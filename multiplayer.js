@@ -22,8 +22,12 @@ multiplayer = {
     startTime: 0
 }
 
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+function scoreV2(stats, noteCount) {
+    curNoteCount = stats.reduce((a, c) => a + c, 0)
+    acc = ((stats[0] + (stats[1] * 0.975) + (stats[2] * 0.5) + (stats[3] * 0.1)) / curNoteCount) ** 3;
+    input = (1 - (stats[4] + (0.25 * stats[3])) / curNoteCount) ** (0.5 * stats[4])
+
+    return ((750000 * acc) + (250000 * input)) / noteCount
 }
 
 
@@ -38,7 +42,7 @@ mapStarting = false
 testInterval = setInterval(() => {
     if (multiplayer.code != '' && serverframe.contentWindow) {
         if (Tt.disMode == 1 && He === "game") {
-            serverframe.contentWindow.postMessage(`POST method=setScoreboard&uuid=${T.uuid}&score=${Math.floor(Tt.scoreFinal) ?? 0}&combo=${Tt.combo ?? 0}`, "*")
+            serverframe.contentWindow.postMessage(`POST method=setScoreboard&uuid=${T.uuid}&score=${Math.floor(scoreV2(Tt.hitStats, Tt.beat.length)) ?? 0}&combo=${Tt.combo ?? 0}`, "*")
             serverframe.contentWindow.postMessage(`GET method=getScoreboard&lobbyName=${multiplayer.code}`, "*");
         } else if (Bt.screen == "multiplayer") {
             serverframe.contentWindow.postMessage(`GET method=getLobbyData&lobbyName=${multiplayer.code}`, "*");
@@ -47,6 +51,7 @@ testInterval = setInterval(() => {
                 mapStarting = true
         
                 Bt.screen = "lvl"
+                multiplayer.ready = false
                 Tt.edit = false,
                 Tt.replay.on = false,
                 Ht.search = [multiplayer.mapId]
@@ -851,6 +856,9 @@ Mn = function(e) {
         Tt.buttonHover[1] /= 2,
         Tt.replay.on && Yn(Tt.replay.preMods),
         Vi("menu", "game");
+        if (multiplayer.code == "") {
+            Bt.screen = "multiplayer"
+        }
         break;
     case "retry":
         Tt.disMode = Tt.paused ? 1 : 3,
