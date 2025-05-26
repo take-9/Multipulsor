@@ -45,6 +45,7 @@ testInterval = setInterval(() => {
         
                 Tt.edit = false,
                 Tt.replay.on = false,
+                Ht.search = [multiplayer.mapId]
                 qi(0)
                 Tt.paused = true
                 
