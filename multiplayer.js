@@ -25,9 +25,9 @@ multiplayer = {
 function scoreV2(stats, noteCount) {
     curNoteCount = stats.reduce((a, c) => a + c, 0)
     acc = ((stats[0] + (stats[1] * 0.975) + (stats[2] * 0.5) + (stats[3] * 0.1)) / curNoteCount) ** 3;
-    input = (1 - (stats[4] + (0.25 * stats[3])) / curNoteCount) ** (0.5 * stats[4])
+    input = (1 - (stats[4] + (0.25 * (stats[3] + stats[2]))) / curNoteCount) ** (0.5 * stats[4])
 
-    return ((750000 * acc) + (250000 * input)) / noteCount
+    return (((750000 * acc) + (250000 * input)) * curNoteCount) / noteCount
 }
 
 
@@ -856,7 +856,7 @@ Mn = function(e) {
         Tt.buttonHover[1] /= 2,
         Tt.replay.on && Yn(Tt.replay.preMods),
         Vi("menu", "game");
-        if (multiplayer.code == "") {
+        if (multiplayer.code != "") {
             Bt.screen = "multiplayer"
         }
         break;
