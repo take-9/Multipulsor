@@ -41,11 +41,17 @@ mapStarting = false
 
 testInterval = setInterval(() => {
     if (multiplayer.code != '' && serverframe.contentWindow) {
-        if (Tt.disMode == 1 && He === "game") {
-            serverframe.contentWindow.postMessage(`POST method=setScoreboard&uuid=${T.uuid}&score=${Math.floor(scoreV2(Tt.hitStats, Tt.beat.length)) ?? 0}&combo=${Tt.combo ?? 0}`, "*")
+        if (He === "game") {
+            if (Tt.disMode === 1) {
+                serverframe.contentWindow.postMessage(`POST method=setScoreboard&uuid=${T.uuid}&score=${Math.floor(scoreV2(Tt.hitStats, Tt.beat.length)) ?? 0}&combo=${Tt.combo ?? 0}`, "*")
+                console.log("Setting scoreboard");
+            }
             serverframe.contentWindow.postMessage(`GET method=getScoreboard&lobbyName=${multiplayer.code}`, "*");
+            console.log("Getting scoreboard");
+
         } else if (Bt.screen == "multiplayer") {
             serverframe.contentWindow.postMessage(`GET method=getLobbyData&lobbyName=${multiplayer.code}`, "*");
+            console.log("Getting lobby data");
 
             if (!mapStarting && Date.now() < multiplayer.startTime) {
                 mapStarting = true
@@ -75,140 +81,147 @@ testInterval = setInterval(() => {
 
 // Logoff if user leaves site without hitting the x
 window.addEventListener('beforeunload', function(event) {
-    serverframe.contentWindow.postMessage(`POST method=logoff&uuid=${T.uuid}`, "*")
+    //serverframe.contentWindow.postMessage(`POST method=logoff&uuid=$`, "*");
+    
+    console.log("Window unloading...sending uuid to the server");
+    serverframe.contentWindow.postMessage(`LOCALSET uuid ${T.uuid}`, "*");
+    console.log("Sent");
 });
 
 test = window.addEventListener("message", function(event) {
-    if ((event.data.type ?? "nop") != "rpc") {
+    if ((event.data.type ?? "nop") == "rpc") {
+        return;
+    }
 
-        multiData = JSON.parse(event.data.replaceAll("'", '"'))
+    //console.log(event.data);
+
+    multiData = JSON.parse(event.data.replaceAll("'", '"'))
+    
+    if (multiData.method == "getScoreboard") {
         
-        if (multiData.method == "getScoreboard") {
-            
-            for (const [uuid, data] of Object.entries(multiData.scores)) {
-                if (uuid in multiplayer.roomUsers) {
-                    multiplayer.roomUsers[uuid].score = Number(data.score)
-                    multiplayer.roomUsers[uuid].combo = Number(data.combo)
-                } else {
-                    multiplayer.roomUsers[uuid] = new MultiUser(uuid)
-                }
-                // for (curUser of Object.values(multiplayer.roomUsers)) {
-                //     if (curUser.uuid && curUser.uuid == uuid) {
-                //         added = true
-                //         curUser.score = Number(data.score)
-                //         curUser.combo = Number(data.combo)
-                //     }
-                // }
-                // if (!added) {
-                //     multiplayer.roomUsers[uuid] = new MultiUser(uuid)
-                // }
+        for (const [uuid, data] of Object.entries(multiData.scores)) {
+            if (uuid in multiplayer.roomUsers) {
+                multiplayer.roomUsers[uuid].score = Number(data.score)
+                multiplayer.roomUsers[uuid].combo = Number(data.combo)
+            } else {
+                multiplayer.roomUsers[uuid] = new MultiUser(uuid)
             }
-
-        } else if (multiData.method == "getLobbyData") {
-            if (multiData.mapId != multiplayer.mapId) {
-                // while (Rt.length > 1) { 
-                //     Rt.pop(0) 
-                // }
-                
-                console.log("new map data")
-
-                Bt.lvl.search = "Wait For Host!"
-                Rt[0] = multiplayer.mapId
-                multiplayer.ready = false
-            }
-
-            multiplayer.startTime = multiData.startTime
-
-            for (const [uuid, data] of Object.entries(multiData.players)) {
-                if (uuid in multiplayer.roomUsers) {
-                    multiplayer.roomUsers[uuid].score = 0
-                    multiplayer.roomUsers[uuid].combo = 0
-                    multiplayer.roomUsers[uuid].host = (uuid == multiData.host)
-                    multiplayer.isHost = (T.uuid == multiData.host)
-                    if (uuid != T.uuid) {
-                        multiplayer.roomUsers[uuid].ready = (data.ready)
-                    }
-                    if (!multiplayer.isHost) {
-                        Tt.mods.bpm = Number(multiData.mods.bpmMod)
-                        Tt.mods.hitWindow = Number(multiData.mods.hwMod)
-                        multiplayer.mapId = Number(multiData.mapId)
-                    }
-                    multiplayer.selMods.bpm = Tt.mods.bpm,
-                    multiplayer.selMods.hw = Tt.mods.hitWindow
-                } else {
-                    multiplayer.roomUsers[uuid] = new MultiUser(uuid)
-                }
-            }
-
-            i = 0
-            const uuids = Object.keys(multiplayer.roomUsers)
-            while (i < uuids.length) {
-                if (uuids[i] in multiData.players) {
-                    i++
-                } else {
-                    delete multiplayer.roomUsers[uuids[i]]
-                    uuids.splice(i, 1);
-                }
-            }
-
-            // Holy shit this shit is so fucking ass what the fuck was I cooking
-            // for (curUuid of testedUsers) {
-            //     for (curUser of multiplayer.roomUsers) {
-            //         if (curUser.uuid == curUuid) {
-
-            //         }
+            // for (curUser of Object.values(multiplayer.roomUsers)) {
+            //     if (curUser.uuid && curUser.uuid == uuid) {
+            //         added = true
+            //         curUser.score = Number(data.score)
+            //         curUser.combo = Number(data.combo)
             //     }
+            // }
+            // if (!added) {
+            //     multiplayer.roomUsers[uuid] = new MultiUser(uuid)
             // }
         }
 
-        //gets user data
-        // for (const [uuid, data] of Object.entries(multiData[multiplayer.code].players)) {
-        //     added = false
+    } else if (multiData.method == "getLobbyData") {
+        if (multiData.mapId != multiplayer.mapId) {
+            // while (Rt.length > 1) { 
+            //     Rt.pop(0) 
+            // }
+            
+            console.log("new map data")
+
+            Bt.lvl.search = "Wait For Host!"
+            Rt[0] = multiplayer.mapId
+            multiplayer.ready = false
+        }
+
+        multiplayer.startTime = multiData.startTime
+
+        for (const [uuid, data] of Object.entries(multiData.players)) {
+            if (uuid in multiplayer.roomUsers) {
+                multiplayer.roomUsers[uuid].score = 0
+                multiplayer.roomUsers[uuid].combo = 0
+                multiplayer.roomUsers[uuid].host = (uuid == multiData.host)
+                multiplayer.isHost = (T.uuid == multiData.host)
+                if (uuid != T.uuid) {
+                    multiplayer.roomUsers[uuid].ready = (data.ready)
+                }
+                if (!multiplayer.isHost) {
+                    Tt.mods.bpm = Number(multiData.mods.bpmMod)
+                    Tt.mods.hitWindow = Number(multiData.mods.hwMod)
+                    multiplayer.mapId = Number(multiData.mapId)
+                }
+                multiplayer.selMods.bpm = Tt.mods.bpm,
+                multiplayer.selMods.hw = Tt.mods.hitWindow
+            } else {
+                multiplayer.roomUsers[uuid] = new MultiUser(uuid)
+            }
+        }
+
+        i = 0
+        const uuids = Object.keys(multiplayer.roomUsers)
+        while (i < uuids.length) {
+            if (uuids[i] in multiData.players) {
+                i++
+            } else {
+                delete multiplayer.roomUsers[uuids[i]]
+                uuids.splice(i, 1);
+            }
+        }
+
+        // Holy shit this shit is so fucking ass what the fuck was I cooking
+        // for (curUuid of testedUsers) {
         //     for (curUser of multiplayer.roomUsers) {
-        //         if (curUser.uuid && curUser.uuid == uuid) {
-        //             added = true
-        //             curUser.score = Number(data.score)
-        //             curUser.combo = Number(data.combo)
-        //             curUser.host = Boolean(data.host)
-        //             if (curUser.uuid != T.uuid) {
-        //                 curUser.ready = Boolean(data.ready)
-        //             }
+        //         if (curUser.uuid == curUuid) {
+
         //         }
-        //     }
-        //     if (!added) {
-        //         multiplayer.roomUsers.push(new MultiUser(uuid))
-        //     }
-        // }
-
-        // for (let curUser of multiplayer.roomUsers) {
-        //     if (curUser.uuid == T.uuid) {
-        //         multiplayer.isHost = multiData[multiplayer.code].players[T.uuid].host
-
-        //         if (!multiplayer.isHost) {
-        //             Tt.mods.bpm = Number(multiData[multiplayer.code].mods.bpmMod)
-        //             Tt.mods.hitWindow = Number(multiData[multiplayer.code].mods.hwMod)
-        //             multiplayer.mapId = Number(multiData[multiplayer.code].mapId)
-        //         }
-        //         multiplayer.selMods.bpm = Tt.mods.bpm,
-        //         multiplayer.selMods.hw = Tt.mods.hitWindow
-        //     }
-        // }
-
-        // if (!multiplayer.isHost) {
-
-        //     if (Bt.screen == "lvl" && He == "menu") {
-        //         if (!v.newGrabbedLevels[multiplayer.mapId]) {
-        //             B("newGrabLevelMeta", {
-        //                 mode: "id",
-        //                 a: multiplayer.mapId
-        //             })
-        //         }
-        //         while (Rt.length > 1) { Rt.pop(0) }
-        //         Bt.lvl.search = "Wait For Host!"
-        //         Rt[0] = multiplayer.mapId
         //     }
         // }
     }
+
+    //gets user data
+    // for (const [uuid, data] of Object.entries(multiData[multiplayer.code].players)) {
+    //     added = false
+    //     for (curUser of multiplayer.roomUsers) {
+    //         if (curUser.uuid && curUser.uuid == uuid) {
+    //             added = true
+    //             curUser.score = Number(data.score)
+    //             curUser.combo = Number(data.combo)
+    //             curUser.host = Boolean(data.host)
+    //             if (curUser.uuid != T.uuid) {
+    //                 curUser.ready = Boolean(data.ready)
+    //             }
+    //         }
+    //     }
+    //     if (!added) {
+    //         multiplayer.roomUsers.push(new MultiUser(uuid))
+    //     }
+    // }
+
+    // for (let curUser of multiplayer.roomUsers) {
+    //     if (curUser.uuid == T.uuid) {
+    //         multiplayer.isHost = multiData[multiplayer.code].players[T.uuid].host
+
+    //         if (!multiplayer.isHost) {
+    //             Tt.mods.bpm = Number(multiData[multiplayer.code].mods.bpmMod)
+    //             Tt.mods.hitWindow = Number(multiData[multiplayer.code].mods.hwMod)
+    //             multiplayer.mapId = Number(multiData[multiplayer.code].mapId)
+    //         }
+    //         multiplayer.selMods.bpm = Tt.mods.bpm,
+    //         multiplayer.selMods.hw = Tt.mods.hitWindow
+    //     }
+    // }
+
+    // if (!multiplayer.isHost) {
+
+    //     if (Bt.screen == "lvl" && He == "menu") {
+    //         if (!v.newGrabbedLevels[multiplayer.mapId]) {
+    //             B("newGrabLevelMeta", {
+    //                 mode: "id",
+    //                 a: multiplayer.mapId
+    //             })
+    //         }
+    //         while (Rt.length > 1) { Rt.pop(0) }
+    //         Bt.lvl.search = "Wait For Host!"
+    //         Rt[0] = multiplayer.mapId
+    //     }
+    // }
 }
 );
 
@@ -3940,7 +3953,7 @@ fs.screens = function() {
                                     type: "error",
                                     message: "multiplayer_selectError"
                                 })
-                                : (multiplayer.mapId = Rt[Bt.lvl.sel], Bt.trans = "multiplayer", serverframe.contentWindow.postMessage(`POST method=setMapData&uuid=${T.uuid}&bpmMod=${Tt.mods.bpm}&hwMod=${Tt.mods.hitWindow}&mapId=${multiplayer.mapId}`, "*"))
+                                : (multiplayer.mapId = Rt[Bt.lvl.sel], Bt.trans = "multiplayer", serverframe.contentWindow.postMessage(`POST method=setMapData&uuid=${T.uuid}&bpmMod=${Tt.mods.bpm}&hwMod=${Tt.mods.hitWindow}&mapId=${multiplayer.mapId}`, "*"), console.log("Setting map data"))
                             }
                             Bt.lvl.buttonHover[4] /= 2
                         }
@@ -4255,8 +4268,10 @@ fs.screens = function() {
                         if (multiplayer.code == '') {
                             multiplayer.roomUsers = {}
                             serverframe.contentWindow.postMessage(`POST method=logoff&uuid=${T.uuid}`, "*")
+                            console.log("Lobby code empty, logging off");
                         } else {
                             serverframe.contentWindow.postMessage(`POST method=setLobby&uuid=${T.uuid}&lobbyName=${multiplayer.code}`, "*")
+                            console.log("Setting lobby code")
                         }
                     }
                 })
@@ -4266,7 +4281,7 @@ fs.screens = function() {
                         vt.callback?.();
                     else {
                         if (Ft("rcorner", width / 3 + kt + ((width / 3 * 2 - 2 * kt) / 2 + kt / 2), height / 16 + kt + ((height - height / 16) / 3 - 2 * kt) + kt + ((height - height / 16) / 3 - 2 * kt) + kt + (height - height / 16) / 3 / 3 * 2 + kt / 2 + ((height - height / 16) / 3 / 3 - kt / 2) / 4 * 3 - kt / 2, (width / 3 * 2 - 2 * kt) / 2 - kt / 2, ((height - height / 16) / 3 / 3 - kt / 2) / 2) && (Bt.lvl.buttonHover[11] /= 4,
-                        Bt.lvl.showMods = !Bt.lvl.showMods, multiplayer.isHost ? serverframe.contentWindow.postMessage(`POST method=setMapData&uuid=${T.uuid}&bpmMod=${Tt.mods.bpm}&hwMod=${Tt.mods.hitWindow}&mapId=${multiplayer.mapId}`, "*") : void(0)),
+                        Bt.lvl.showMods = !Bt.lvl.showMods, multiplayer.isHost ? serverframe.contentWindow.postMessage(`POST method=setMapData&uuid=${T.uuid}&bpmMod=${Tt.mods.bpm}&hwMod=${Tt.mods.hitWindow}&mapId=${multiplayer.mapId}`, "*") : void(0)), console.log("Setting mods"),
                         // Ft("rcorner", width / 3 + kt + ((width / 3 * 2 - 2 * kt) / 2 + kt / 2), height / 16 + kt + ((height - height / 16) / 3 - 2 * kt) + kt + ((height - height / 16) / 3 - 2 * kt) + kt + (height - height / 16) / 3 / 3 * 2 + kt / 2 + ((height - height / 16) / 3 / 3 - kt / 2) / 4 * 3 - kt / 2 - ((height - height / 16) / 3 / 3 - kt / 2) / 2 - kt / 2, (width / 3 * 2 - 2 * kt) / 2 - kt / 2, ((height - height / 16) / 3 / 3 - kt / 2) / 2) && (Bt.lvl.buttonHover[15] /= 4,
                         // vt.active = !0),
                         Ft("rcorner", width / 3 + kt, height / 16 + kt + ((height - height / 16) / 3 - 2 * kt) + kt + ((height - height / 16) / 3 - 2 * kt) + kt + (height - height / 16) / 3 / 3 * 2 + kt / 2 + ((height - height / 16) / 3 / 3 - kt / 2) / 4 * 3 - kt / 2, (width / 3 * 2 - 2 * kt) / 2 - kt / 2, ((height - height / 16) / 3 / 3 - kt / 2) / 2))
@@ -4296,7 +4311,8 @@ fs.screens = function() {
                             Tt.replay.on = !1,
                             console.log(multiplayer.ready);
                             if (multiplayer.isHost) {
-                                serverframe.contentWindow.postMessage(`POST method=setStartTime&uuid=${T.uuid}`, "*")
+                                serverframe.contentWindow.postMessage(`POST method=setStartTime&uuid=${T.uuid}`, "*");
+                                console.log("Setting map start time");
                             } else {
                                 multiplayer.ready = !multiplayer.ready;
                                 for (curUser of Object.values(multiplayer.roomUsers)) {
@@ -4305,6 +4321,7 @@ fs.screens = function() {
                                     }
                                 }
                                 serverframe.contentWindow.postMessage(`POST method=setReady&uuid=${T.uuid}&ready=${multiplayer.ready}`, "*")
+                                console.log("Setting ready");
                             }
                         }
                         Bt.lvl.buttonHover[4] /= 2
@@ -4581,9 +4598,9 @@ fs.screens.logo = function() {
 fs.screens.header = function() {
     // --- EDITED CODE (X to leave lobby in multiplayer lobby)
     if (multiplayer.code == '') {
-        Ft("rcorner", height / 64 - height / 128 / 4, height / 64 - height / 128 / 4, height / 32 + height / 128 / 2, height / 32 + height / 128 / 2) && (Bt.side = !Bt.side)
+        Ft("rcorner", height / 64 - height / 128 / 4, height / 64 - height / 128 / 4, height / 32 + height / 128 / 2, height / 32 + height / 128 / 2) && (Bt.side = !Bt.side);
     } else {
-        Ft("rcorner", height / 64 - height / 128 / 4, height / 64 - height / 128 / 4, height / 32 + height / 128 / 2, height / 32 + height / 128 / 2) && (multiplayer.code = '', multiplayer.roomUsers = {}, serverframe.contentWindow.postMessage(`POST method=logoff&uuid=${T.uuid}`, "*"))
+        Ft("rcorner", height / 64 - height / 128 / 4, height / 64 - height / 128 / 4, height / 32 + height / 128 / 2, height / 32 + height / 128 / 2) && (multiplayer.code = '', multiplayer.roomUsers = {}, serverframe.contentWindow.postMessage(`POST method=logoff&uuid=${T.uuid}`, "*"), console.log("X clicked, Logging off"));
     }
 }
 ,
