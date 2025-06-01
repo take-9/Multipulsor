@@ -80,9 +80,10 @@ testInterval = setInterval(() => {
 }, 500)
 
 // Logoff if user leaves site without hitting the x
+// The server iframe actually logs you out itself (on the "unload" event instead of "beforeunload"), but it needs a UUID
 window.addEventListener('beforeunload', function(event) {
     //serverframe.contentWindow.postMessage(`POST method=logoff&uuid=$`, "*");
-    
+
     console.log("Window unloading...sending uuid to the server");
     serverframe.contentWindow.postMessage(`LOCALSET uuid ${T.uuid}`, "*");
     console.log("Sent");
@@ -4292,36 +4293,77 @@ fs.screens = function() {
                     }
                 else {
                     multiplayer.isHost ?
+                        //host spectator button
                         (Ft("rcorner", width / 3 + i, height / 16 + i + ((height - height / 16) / 3 - 2 * i) + i + ((height - height / 16) / 3 - 2 * i) + i + (height - height / 16) / 3 / 3 * 2 + i / 2, (width / 3 * 2 - 4 * i) / 3, (height - height / 16) / 3 / 3 - i / 2) && (Bt.lvl.buttonHover[11] /= 4, console.log("Spectating activation here.")),
+                        //host mods button
                         Ft("rcorner", width / 3 + 2 * i + (width / 3 * 2 - 4 * i) / 3, height / 16 + i + ((height - height / 16) / 3 - 2 * i) + i + ((height - height / 16) / 3 - 2 * i) + i + (height - height / 16) / 3 / 3 * 2 + i / 2, (width / 3 * 2 - 4 * i) / 3, (height - height / 16) / 3 / 3 - i / 2) && (console.log("hi"), Bt.lvl.buttonHover[12] /= 4, Bt.lvl.showMods = true),
+                        
                         Ft("rcorner", width / 3 + 3 * i + (width / 3 * 2 - 4 * i) / 3 * 2, height / 16 + i + ((height - height / 16) / 3 - 2 * i) + i + ((height - height / 16) / 3 - 2 * i) + i + (height - height / 16) / 3 / 3 * 2 + i / 2, (width / 3 * 2 - 4 * i) / 3, (height - height / 16) / 3 / 3 - i / 2) && (Bt.lvl.buttonHover[3] /= 4, Bt.trans = "lvl"))
 
                     :   (Ft("rcorner", width / 3 + i, height / 16 + i + ((height - height / 16) / 3 - 2 * i) + i + ((height - height / 16) / 3 - 2 * i) + i + (height - height / 16) / 3 / 3 * 2 + i / 2, (width / 3 * 2 - 4 * i) / 2, (height - height / 16) / 3 / 3 - i / 2, (height - height / 16) / 3 / 3 - i / 2) && (Bt.lvl.buttonHover[11] /= 4, console.log("Spectating activation here.")),
                         Ft("rcorner", width / 3 + 3 * i + (width / 3 * 2 - 4 * i) / 2, height / 16 + i + ((height - height / 16) / 3 - 2 * i) + i + ((height - height / 16) / 3 - 2 * i) + i + (height - height / 16) / 3 / 3 * 2 + i / 2, (width / 3 * 2 - 4 * i) / 2, (height - height / 16) / 3 / 3 - i / 2) && (console.log("hi"), Bt.lvl.buttonHover[3] /= 4, Bt.lvl.showMods = !Bt.lvl.showMods));
-
+                    
+                    //download/ready/unready/play button?????
                     if (Ft("rcorner", width / 3 + i, height / 16 + i + ((height - height / 16) / 3 - 2 * i) + i + ((height - height / 16) / 3 - 2 * i) + i, width / 3 * 2 - 2 * i, (height - height / 16) / 3 / 3 * 2 - i / 2)) {
                         switch (qo(multiplayer.mapId)) {
-                        case 0:
+                        case 0: //the map hasn't been downloaded yet
                             m(multiplayer.mapId, "id", !0);
                             break;
-                        case 1:
+                        case 1: //uhhhhhhhhhh
                             break;
                         case 2:
                             Tt.edit = !1,
                             Tt.replay.on = !1,
                             console.log(multiplayer.ready);
-                            if (multiplayer.isHost) {
-                                serverframe.contentWindow.postMessage(`POST method=setStartTime&uuid=${T.uuid}`, "*");
-                                console.log("Setting map start time");
+
+
+                            //EDIT HEEEYYY HIIII HELLOO ITS MEEEE 
+                            //T9 here, it looks like there just straight up wasn't logic here to check if everyone else was ready??
+                            //but i cant really read this stuff like you can so lmk if im being stupid because im probably being very stupid
+                            //i kinda restructured this whole part
+                            //for now, I just have the host ready themselves on match start like everyone else for consistency
+
+
+                            //If the host is starting the match they better be fucking ready
+                            if(multiplayer.isHost) {
+                                multiplayer.ready = true;
                             } else {
                                 multiplayer.ready = !multiplayer.ready;
-                                for (curUser of Object.values(multiplayer.roomUsers)) {
-                                    if (curUser.uuid == T.uuid) {
-                                        curUser.ready = multiplayer.ready
+                            }
+
+                            //sync up your own ready state in the member list
+                            //it previously worked like this but uhhhh
+                            //why? 
+                            /*
+                            for (curUser of Object.values(multiplayer.roomUsers)) {
+                                if (curUser.uuid == T.uuid) {
+                                    curUser.ready = multiplayer.ready
+                                }
+                            }*/
+                            
+                            //i think this works the same
+                            multiplayer.roomUsers[T.uuid].ready = multiplayer.ready;
+
+
+                            serverframe.contentWindow.postMessage(`POST method=setReady&uuid=${T.uuid}&ready=${multiplayer.ready}`, "*")
+                            console.log("Setting ready");
+
+
+                            if (multiplayer.isHost) {
+                                //when the host clicks the start button, check to see if all players are ready before actually starting the match
+                                //i cant really test this logic on my own soooooo
+                                let allPlayersReady = true;
+                                for(user of Object.values(multiplayer.roomUsers)) {
+                                    if(!user.ready) {
+                                        allPlayersReady = false;
+                                        break;
                                     }
                                 }
-                                serverframe.contentWindow.postMessage(`POST method=setReady&uuid=${T.uuid}&ready=${multiplayer.ready}`, "*")
-                                console.log("Setting ready");
+
+                                if(allPlayersReady) {
+                                    serverframe.contentWindow.postMessage(`POST method=setStartTime&uuid=${T.uuid}`, "*");
+                                    console.log("Setting map start time");
+                                }
                             }
                         }
                         Bt.lvl.buttonHover[4] /= 2
