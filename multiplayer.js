@@ -60,7 +60,7 @@ const ServerParams = Object.freeze({
     LOBBY_NAME: "lobbyName",
 
     MAP_ID: "mapId",
-    BPM_MOD: "hwMod",
+    BPM_MOD: "bpmMod",
     HW_MOD: "hwMod",
 
 });
@@ -89,6 +89,8 @@ class Server {
             }
         }
         message = message.slice(0, -1); //remove the trailing &
+
+        console.log(message)
 
         SERVER_FRAME.contentWindow.postMessage(message, "*");
     }
@@ -195,7 +197,7 @@ let serverPollingInterval = setInterval(() => {
             }
         }
     }
-}, 500)
+}, 1000)
 
 // Logoff if user leaves site without hitting the x
 // The server iframe actually logs you out itself (on the "unload" event instead of "beforeunload"), but it needs a UUID
@@ -5144,7 +5146,7 @@ cs.musicTime = function() {
     Tt.songPlaying = !0) : Tt.paused && (Qt[Tt.song].pause(),
     Tt.songPlaying = !1)),
     Tt.edit || !1 !== Tt.songEnded || Qt[Tt.song].on("end", function() {
-        console.log("ENDED SONG"),
+        //console.log("ENDED SONG"),
         Tt.songEnded = [millis(), Qt[Tt.song].duration]
     }),
     !1 !== Tt.edit || Tt.paused || 1 !== Tt.disMode || (!1 !== Tt.songPlaying || !1 !== Ne && "hidden" !== Ne || !1 === Tt.preLevelStart ? (//(console.log("Seek:" + Qt[Tt.song].seek()),
