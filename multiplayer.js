@@ -150,7 +150,7 @@ class Server {
     }
     static logOff() {
         console.log("logging off");
-        this.request(RequestTypes.GET, this.setterParams(Methods.LOG_OFF));
+        this.request(RequestTypes.POST, this.setterParams(Methods.LOG_OFF));
     }
 
     static getScoreboard() {
