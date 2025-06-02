@@ -247,30 +247,6 @@ let serverResponseListener = window.addEventListener(
                 }
             }
         } else if (multiData.method == "getLobbyData") {
-            multiplayer.isHost = T.uuid == multiData.host;
-
-            if (!multiplayer.isHost) {
-                Bt.lvl.search = "Wait For Host!";
-
-                const newMapId = Number(multiData.mapId);
-                const newBpm = Number(multiData.mods.bpmMod);
-                const newHw = Number(multiData.mods.hwMod);
-
-                if (multiplayer.mapId !== newMapId) {
-                    console.log("map changed");
-                    multiplayer.mapId = newMapId;
-                    Rt[0] = multiplayer.mapId;
-                    setReady(false);
-                }
-                if (multiplayer.selMods.bpm !== newBpm || multiplayer.selMods.hw !== newHw) {
-                    Tt.mods.bpm = Number(multiData.mods.bpmMod);
-                    Tt.mods.hitWindow = Number(multiData.mods.hwMod);
-                    multiplayer.selMods.bpm = Tt.mods.bpm;
-                    multiplayer.selMods.hw = Tt.mods.hitWindow;
-                    setReady(false);
-                }
-            }
-
             multiplayer.startTime = multiData.startTime;
 
             for (const [uuid, data] of Object.entries(multiData.players)) {
@@ -296,6 +272,29 @@ let serverResponseListener = window.addEventListener(
                 } else {
                     delete multiplayer.roomUsers[uuids[i]];
                     uuids.splice(i, 1);
+                }
+            }
+            multiplayer.isHost = T.uuid == multiData.host;
+
+            if (!multiplayer.isHost) {
+                Bt.lvl.search = "Wait For Host!";
+
+                const newMapId = Number(multiData.mapId);
+                const newBpm = Number(multiData.mods.bpmMod);
+                const newHw = Number(multiData.mods.hwMod);
+
+                if (multiplayer.mapId !== newMapId) {
+                    console.log("map changed");
+                    multiplayer.mapId = newMapId;
+                    Rt[0] = multiplayer.mapId;
+                    setReady(false);
+                }
+                if (multiplayer.selMods.bpm !== newBpm || multiplayer.selMods.hw !== newHw) {
+                    Tt.mods.bpm = Number(multiData.mods.bpmMod);
+                    Tt.mods.hitWindow = Number(multiData.mods.hwMod);
+                    multiplayer.selMods.bpm = Tt.mods.bpm;
+                    multiplayer.selMods.hw = Tt.mods.hitWindow;
+                    setReady(false);
                 }
             }
         }
