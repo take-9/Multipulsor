@@ -1,6 +1,12 @@
+//"use strict"; //so it turns out there's a reason we didn't do this before D:
+
+//abort if multiplayer has already been set up
+
+
+
 // !!! Add multiplayer setup
 
-multiplayer = {
+const multiplayer = {
     code: '',
     roomUsers: [],
     beatmap: 0,
@@ -22,81 +28,191 @@ multiplayer = {
     startTime: 0
 }
 
-function scoreV2(stats, noteCount) {
-    curNoteCount = stats.reduce((a, c) => a + c, 0)
-    acc = ((stats[0] + (stats[1] * 0.975) + (stats[2] * 0.5) + (stats[3] * 0.1)) / curNoteCount) ** 3;
-    input = (1 - (stats[4] + (0.25 * (stats[3] + stats[2]))) / curNoteCount) ** (0.5 * stats[4])
+//Calculates a player's ScoreV2 score from their hitstats
+function scoreV2(stats, totalNoteCount) {
+    let [marvs, greats, goods, oks, misses] = stats;
 
-    return (((750000 * acc) + (250000 * input)) * curNoteCount) / noteCount
+    curNoteCount = marvs + greats + goods + oks + misses;
+
+    accScore = ((marvs + (greats * 0.975) + (goods * 0.5) + (oks * 0.1)) / curNoteCount) ** 3;
+    inputScore = (1 - (misses + (0.25 * (oks + goods))) / curNoteCount) ** (0.5 * misses);
+
+    return floor((((750000 * accScore) + (250000 * inputScore)) * curNoteCount) / totalNoteCount);
 }
 
-
 // !!! Server Stuffs
+//instantiate iframe link to server
+const RequestTypes = Object.freeze({
+    POST: "POST",
+    GET: "GET",
+    LOCALSET: "LOCALSET"
+});
+const ServerParams = Object.freeze({
+    METHOD: "method",
+    
+    UUID: "uuid",
 
-let serverframe = document.createElement("iframe");
-serverframe.src = "https://172.104.10.6/Server.html";
-document.children[0].appendChild(serverframe);
+    READY: "ready",
 
-mapStarting = false
+    SCORE: "score",
+    COMBO: "combo",
 
-testInterval = setInterval(() => {
-    if (multiplayer.code != '' && serverframe.contentWindow) {
+    LOBBY_NAME: "lobbyName",
+
+    MAP_ID: "mapId",
+    BPM_MOD: "hwMod",
+    HW_MOD: "hwMod",
+
+});
+const Methods = Object.freeze({
+    SET_SCOREBOARD: "setScoreboard",
+    SET_MAP_DATA: "setMapData",
+    SET_LOBBY: "setLobby",
+    SET_START_TIME: "setStartTime",
+    SET_READY: "setReady",
+    LOG_OFF: "logoff",
+
+    GET_SCOREBOARD: "getScoreboard",
+    GET_LOBBY_DATA: "getLobbyData",
+});
+
+const SERVER_FRAME = document.createElement("iframe");
+SERVER_FRAME.src = "https://172.104.10.6/Server.html";
+document.children[0].appendChild(SERVER_FRAME);
+class Server {
+    //server calling helper methods
+    static request(method, data) {
+        let message = method + " ";
+        for (const entry of Object.entries(data)) {
+            if (entry[1]) {
+                message += entry.join("=") + "&";
+            }
+        }
+        message = message.slice(0, -1); //remove the trailing &
+
+        SERVER_FRAME.contentWindow.postMessage(message, "*");
+    }
+
+
+    static setterParams(method) {
+        const data = {};
+        data[ServerParams.METHOD] = method;
+        data[ServerParams.UUID] = T.uuid;
+        return data;
+    }
+    static getterParams(method) {
+        const data = {};
+        data[ServerParams.METHOD] = method;
+        data[ServerParams.LOBBY_NAME] = multiplayer.code;
+        return data;
+    }
+
+    static setScoreboard(score=null, combo=null) {
+        console.log("setting scoreboard");
+        const data = this.setterParams(Methods.SET_SCOREBOARD);
+        data[ServerParams.SCORE] = score;
+        data[ServerParams.COMBO] = combo;
+
+        this.request(RequestTypes.POST, data);
+    }
+    static setMapData(mapId = null, bpmMod = null, hwMod = null) {
+        console.log("Setting map data");
+        const data = this.setterParams(Methods.SET_MAP_DATA);
+        data[ServerParams.MAP_ID] = mapId;
+        data[ServerParams.BPM_MOD] = bpmMod;
+        data[ServerParams.HW_MOD] = hwMod;
+
+        this.request(RequestTypes.POST, data);
+    }
+    static setLobby(lobbyName) {
+        console.log("setting lobby");
+        const data = this.setterParams(Methods.SET_LOBBY);
+        data[ServerParams.LOBBY_NAME] = lobbyName;
+
+        this.request(RequestTypes.POST, data);
+    }
+    static setStartTime() {
+        console.log("setting start time");
+        this.request(RequestTypes.POST, this.setterParams(Methods.SET_START_TIME));
+    }
+    static setReady(ready) {
+        console.log("setting ready");
+        const data = this.setterParams(Methods.SET_READY);
+        data[ServerParams.READY] = ready;
+        this.request(RequestTypes.POST, data);
+    }
+    static logOff() {
+        console.log("logging off")
+        this.request(RequestTypes.GET, this.setterParams(Methods.LOG_OFF));
+    }
+
+    static getScoreboard() {
+        console.log("getting scoreboard");
+        this.request(RequestTypes.GET, this.getterParams(Methods.GET_SCOREBOARD));
+    }
+    static getLobbyData() {
+        console.log("getting lobby data");
+        this.request(RequestTypes.GET, this.getterParams(Methods.GET_LOBBY_DATA));
+    }
+
+    static localSet(key, value) {
+        const messageArray = [RequestTypes.LOCALSET, key, value];
+        const message = messageArray.join(" ");
+        SERVER_FRAME.contentWindow.postMessage(message, "*");
+    }
+}
+
+let mapStarting = false;
+
+let serverPollingInterval = setInterval(() => {
+    if (multiplayer.code != '' && SERVER_FRAME.contentWindow) {
         if (He === "game") {
             if (Tt.disMode === 1) {
-                serverframe.contentWindow.postMessage(`POST method=setScoreboard&uuid=${T.uuid}&score=${Math.floor(scoreV2(Tt.hitStats, Tt.beat.length)) ?? 0}&combo=${Tt.combo ?? 0}`, "*")
-                console.log("Setting scoreboard");
+                Server.setScoreboard(scoreV2(Tt.hitStats, Tt.beat.length), Tt.combo ?? 0);
             }
-            serverframe.contentWindow.postMessage(`GET method=getScoreboard&lobbyName=${multiplayer.code}`, "*");
-            console.log("Getting scoreboard");
+            Server.getScoreboard();
 
         } else if (Bt.screen == "multiplayer") {
-            serverframe.contentWindow.postMessage(`GET method=getLobbyData&lobbyName=${multiplayer.code}`, "*");
-            console.log("Getting lobby data");
+            Server.getLobbyData();
 
-            if (!mapStarting && Date.now() < multiplayer.startTime) {
-                mapStarting = true
+            if (!mapStarting && multiplayer.startTime > Date.now()) {
+                mapStarting = true;
         
-                Bt.screen = "lvl"
-                multiplayer.ready = false
-                Tt.edit = false,
-                Tt.replay.on = false,
-                Ht.search = [multiplayer.mapId]
-                Bt.lvl.sel = 0
-                qi(0)
-                Tt.paused = true
+                Bt.screen = "lvl";
+                multiplayer.ready = false;
+                Tt.edit = false;
+                Tt.replay.on = false;
+                Ht.search = [multiplayer.mapId];
+                Bt.lvl.sel = 0;
+                qi(0);
+                Tt.paused = true;
                 
                 setTimeout(() => {
-                    Mn("retry")
-                    mapStarting = false
+                    Mn("retry");
+                    mapStarting = false;
                     //Tt.paused = false
-                }, multiplayer.startTime - Date.now())
+                }, multiplayer.startTime - Date.now());
             }
-
-
         }
-        // serverframe.contentWindow.postMessage(`uuid=${T.uuid}&score=${Math.floor(Tt.scoreFinal) ?? 0}&combo=${Tt.combo ?? 0}&lobbyName=${multiplayer.code}&bpmMod=${Tt.mods.bpm ?? 1}
-        // &hwMod=${Tt.mods.hitWindow ?? 1}&mapId=${multiplayer.mapId ?? 10436}&ready=${multiplayer.ready ?? false}`, "*") // selLevel
     }
 }, 500)
 
 // Logoff if user leaves site without hitting the x
 // The server iframe actually logs you out itself (on the "unload" event instead of "beforeunload"), but it needs a UUID
 window.addEventListener('beforeunload', function(event) {
-    //serverframe.contentWindow.postMessage(`POST method=logoff&uuid=$`, "*");
-
     console.log("Window unloading...sending uuid to the server");
-    serverframe.contentWindow.postMessage(`LOCALSET uuid ${T.uuid}`, "*");
+    Server.localSet(ServerParams.uuid, T.uuid);
     console.log("Sent");
 });
 
-test = window.addEventListener("message", function(event) {
+let serverResponseListener = window.addEventListener("message", function(event) {
     if ((event.data.type ?? "nop") == "rpc") {
         return;
     }
 
     //console.log(event.data);
 
-    multiData = JSON.parse(event.data.replaceAll("'", '"'))
+    const multiData = JSON.parse(event.data.replaceAll("'", '"'))
     
     if (multiData.method == "getScoreboard") {
         
@@ -107,25 +223,11 @@ test = window.addEventListener("message", function(event) {
             } else {
                 multiplayer.roomUsers[uuid] = new MultiUser(uuid)
             }
-            // for (curUser of Object.values(multiplayer.roomUsers)) {
-            //     if (curUser.uuid && curUser.uuid == uuid) {
-            //         added = true
-            //         curUser.score = Number(data.score)
-            //         curUser.combo = Number(data.combo)
-            //     }
-            // }
-            // if (!added) {
-            //     multiplayer.roomUsers[uuid] = new MultiUser(uuid)
-            // }
         }
 
     } else if (multiData.method == "getLobbyData") {
-        if (multiData.mapId != multiplayer.mapId) {
-            // while (Rt.length > 1) { 
-            //     Rt.pop(0) 
-            // }
-            
-            console.log("new map data")
+        if (multiData.mapId != multiplayer.mapId) {            
+            console.log("new map data");
 
             Bt.lvl.search = "Wait For Host!"
             Rt[0] = multiplayer.mapId
@@ -165,15 +267,6 @@ test = window.addEventListener("message", function(event) {
                 uuids.splice(i, 1);
             }
         }
-
-        // Holy shit this shit is so fucking ass what the fuck was I cooking
-        // for (curUuid of testedUsers) {
-        //     for (curUser of multiplayer.roomUsers) {
-        //         if (curUser.uuid == curUuid) {
-
-        //         }
-        //     }
-        // }
     }
 
     //gets user data
@@ -223,8 +316,7 @@ test = window.addEventListener("message", function(event) {
     //         Rt[0] = multiplayer.mapId
     //     }
     // }
-}
-);
+});
 
 
 // !!! Creates class to show multiplayer user data
@@ -346,7 +438,7 @@ multiplayer.roomUsers = {
     // // new MultiUser("41ca407f-0732-4fa7-b62b-0bff8a20b07d"),
     // new MultiUser("ce2cee3b-c9fe-45ac-aba8-07d28fb8dd99"),
     // // new MultiUser("05d4ce4f-a3c1-4632-a792-6381ecece78e")
-}
+};
 F.en["settings_multiCode"] = "Multiplayer Room";
 F.en["settings_multiCode_sub"] = "Connect with other users using the same code";
 F.en["settings_multiConnect"] = "Refresh Connection";
@@ -390,7 +482,7 @@ F.en["multiplayer_waiting"] = "Waiting for players..."
 //             });
 //         } else {
 //             multiplayer.roomUsers = []
-//             serverframe.contentWindow.postMessage(`POST method=setMapData&uuid=${T.uuid}&lobbyName=${multiplayer.code}&bpmMod=${Tt.mods.bpm}&hwMod=${Tt.mods.hw}`, "*")
+//             SERVER_FRAME.contentWindow.postMessage(`POST method=setMapData&uuid=${T.uuid}&lobbyName=${multiplayer.code}&bpmMod=${Tt.mods.bpm}&hwMod=${Tt.mods.hw}`, "*")
 //             Gn({
 //                 type: "success",
 //                 message: "settings_multiConnect_refresh",
@@ -555,12 +647,12 @@ c.multiplayer = function () {
     if (multiplayer.code != '') {
 
         // Show Users
-        fill($.overlayShade),
-        rect(0, height/16, width / 3, height),
-        tempUserDraw = Object.values(multiplayer.roomUsers).sort(compareRank),
+        fill($.overlayShade);
+        rect(0, height/16, width / 3, height);
+        tempUserDraw = Object.values(multiplayer.roomUsers).sort(compareRank);
         tempUserDraw.forEach((user, index) => {
             user.drawLobby(width / 64, (height / 2) - (Object.keys(multiplayer.roomUsers).length * width / 45) + ((index) * (width / 22.5)) + (height / 16), (width / 3) - (width / 32))
-        }),
+        });
         fill(255),
         textAlign(CENTER, TOP),
         textSize(kt * 1.5),
@@ -3509,7 +3601,7 @@ function qi(e, t, i) {
         Tt.mods.startPos = 0,
         Tt.mods.endPos = 0
 
-        for (curUser of Object.values(multiplayer.roomUsers)) {
+        for (const curUser of Object.values(multiplayer.roomUsers)) {
             if (!curUser.host && !curUser.ready && curUser.uuid != T.uuid) {
                 console.log(curUser)
                 Gn({
@@ -3954,7 +4046,7 @@ fs.screens = function() {
                                     type: "error",
                                     message: "multiplayer_selectError"
                                 })
-                                : (multiplayer.mapId = Rt[Bt.lvl.sel], Bt.trans = "multiplayer", serverframe.contentWindow.postMessage(`POST method=setMapData&uuid=${T.uuid}&bpmMod=${Tt.mods.bpm}&hwMod=${Tt.mods.hitWindow}&mapId=${multiplayer.mapId}`, "*"), console.log("Setting map data"))
+                                : (multiplayer.mapId = Rt[Bt.lvl.sel], Bt.trans = "multiplayer", Server.setMapData(multiplayer.mapId, Tt.mods.bpm, Tt.mods.hitWindow))
                             }
                             Bt.lvl.buttonHover[4] /= 2
                         }
@@ -4268,11 +4360,9 @@ fs.screens = function() {
                     after: function() {
                         if (multiplayer.code == '') {
                             multiplayer.roomUsers = {}
-                            serverframe.contentWindow.postMessage(`POST method=logoff&uuid=${T.uuid}`, "*")
-                            console.log("Lobby code empty, logging off");
+                            Server.logOff();
                         } else {
-                            serverframe.contentWindow.postMessage(`POST method=setLobby&uuid=${T.uuid}&lobbyName=${multiplayer.code}`, "*")
-                            console.log("Setting lobby code")
+                            Server.setLobby(multiplayer.code);
                         }
                     }
                 })
@@ -4282,7 +4372,7 @@ fs.screens = function() {
                         vt.callback?.();
                     else {
                         if (Ft("rcorner", width / 3 + kt + ((width / 3 * 2 - 2 * kt) / 2 + kt / 2), height / 16 + kt + ((height - height / 16) / 3 - 2 * kt) + kt + ((height - height / 16) / 3 - 2 * kt) + kt + (height - height / 16) / 3 / 3 * 2 + kt / 2 + ((height - height / 16) / 3 / 3 - kt / 2) / 4 * 3 - kt / 2, (width / 3 * 2 - 2 * kt) / 2 - kt / 2, ((height - height / 16) / 3 / 3 - kt / 2) / 2) && (Bt.lvl.buttonHover[11] /= 4,
-                        Bt.lvl.showMods = !Bt.lvl.showMods, multiplayer.isHost ? serverframe.contentWindow.postMessage(`POST method=setMapData&uuid=${T.uuid}&bpmMod=${Tt.mods.bpm}&hwMod=${Tt.mods.hitWindow}&mapId=${multiplayer.mapId}`, "*") : void(0)), console.log("Setting mods"),
+                        Bt.lvl.showMods = !Bt.lvl.showMods, multiplayer.isHost ? Server.setMapData(multiplayer.mapId, Tt.mods.bpm, Tt.mods.hitWindow) : void(0)),
                         // Ft("rcorner", width / 3 + kt + ((width / 3 * 2 - 2 * kt) / 2 + kt / 2), height / 16 + kt + ((height - height / 16) / 3 - 2 * kt) + kt + ((height - height / 16) / 3 - 2 * kt) + kt + (height - height / 16) / 3 / 3 * 2 + kt / 2 + ((height - height / 16) / 3 / 3 - kt / 2) / 4 * 3 - kt / 2 - ((height - height / 16) / 3 / 3 - kt / 2) / 2 - kt / 2, (width / 3 * 2 - 2 * kt) / 2 - kt / 2, ((height - height / 16) / 3 / 3 - kt / 2) / 2) && (Bt.lvl.buttonHover[15] /= 4,
                         // vt.active = !0),
                         Ft("rcorner", width / 3 + kt, height / 16 + kt + ((height - height / 16) / 3 - 2 * kt) + kt + ((height - height / 16) / 3 - 2 * kt) + kt + (height - height / 16) / 3 / 3 * 2 + kt / 2 + ((height - height / 16) / 3 / 3 - kt / 2) / 4 * 3 - kt / 2, (width / 3 * 2 - 2 * kt) / 2 - kt / 2, ((height - height / 16) / 3 / 3 - kt / 2) / 2))
@@ -4316,13 +4406,11 @@ fs.screens = function() {
                             Tt.replay.on = !1,
                             console.log(multiplayer.ready);
 
-
                             //EDIT HEEEYYY HIIII HELLOO ITS MEEEE 
                             //T9 here, it looks like there just straight up wasn't logic here to check if everyone else was ready??
                             //but i cant really read this stuff like you can so lmk if im being stupid because im probably being very stupid
                             //i kinda restructured this whole part
                             //for now, I just have the host ready themselves on match start like everyone else for consistency
-
 
                             //If the host is starting the match they better be fucking ready
                             if(multiplayer.isHost) {
@@ -4331,29 +4419,15 @@ fs.screens = function() {
                                 multiplayer.ready = !multiplayer.ready;
                             }
 
-                            //sync up your own ready state in the member list
-                            //it previously worked like this but uhhhh
-                            //why? 
-                            /*
-                            for (curUser of Object.values(multiplayer.roomUsers)) {
-                                if (curUser.uuid == T.uuid) {
-                                    curUser.ready = multiplayer.ready
-                                }
-                            }*/
-                            
-                            //i think this works the same
                             multiplayer.roomUsers[T.uuid].ready = multiplayer.ready;
 
-
-                            serverframe.contentWindow.postMessage(`POST method=setReady&uuid=${T.uuid}&ready=${multiplayer.ready}`, "*")
-                            console.log("Setting ready");
-
+                            Server.setReady(multiplayer.ready);
 
                             if (multiplayer.isHost) {
                                 //when the host clicks the start button, check to see if all players are ready before actually starting the match
                                 //i cant really test this logic on my own soooooo
                                 let allPlayersReady = true;
-                                for(user of Object.values(multiplayer.roomUsers)) {
+                                for(const user of Object.values(multiplayer.roomUsers)) {
                                     if(!user.ready) {
                                         allPlayersReady = false;
                                         break;
@@ -4361,8 +4435,9 @@ fs.screens = function() {
                                 }
 
                                 if(allPlayersReady) {
-                                    serverframe.contentWindow.postMessage(`POST method=setStartTime&uuid=${T.uuid}`, "*");
-                                    console.log("Setting map start time");
+                                    Server.setStartTime();
+                                } else {
+                                    console.log("You can't start the map yet! Some players aren't ready");
                                 }
                             }
                         }
@@ -4642,7 +4717,7 @@ fs.screens.header = function() {
     if (multiplayer.code == '') {
         Ft("rcorner", height / 64 - height / 128 / 4, height / 64 - height / 128 / 4, height / 32 + height / 128 / 2, height / 32 + height / 128 / 2) && (Bt.side = !Bt.side);
     } else {
-        Ft("rcorner", height / 64 - height / 128 / 4, height / 64 - height / 128 / 4, height / 32 + height / 128 / 2, height / 32 + height / 128 / 2) && (multiplayer.code = '', multiplayer.roomUsers = {}, serverframe.contentWindow.postMessage(`POST method=logoff&uuid=${T.uuid}`, "*"), console.log("X clicked, Logging off"));
+        Ft("rcorner", height / 64 - height / 128 / 4, height / 64 - height / 128 / 4, height / 32 + height / 128 / 2, height / 32 + height / 128 / 2) && (multiplayer.code = '', multiplayer.roomUsers = {}, Server.logOff());
     }
 }
 ,
@@ -5054,4 +5129,28 @@ function Yo(e) {
     fill(255, C),
     Dt(o, height / 24 * ("lvl" === e ? 5 : 4) + height / 24 / 2 / 2, height / 16 + height / 24 / 2, width / 3 - width / 48 - height / 24 * ("lvl" === e ? 5 : 4) - height / 24 / 2, height / 24 / 2, w),
     "song" === e && Bt.song.overlayOn && ($t = !1)
+}
+
+//T9 here, the only reason im copying this function is to remove the god awful console flooding
+cs.musicTime = function() {
+    var e, t;
+    1 === soundManager.getSoundById("menuMusic").playState && (soundManager.stop("menuMusic"),
+    soundManager.setVolume(Tt.song, Bt.settings.musicVolume)),
+    !1 === Tt.edit && (!1 === Tt.preLevelStart && (Tt.preLevelStart = millis()),
+    5e3 <= millis() - Tt.preLevelStart + (Tt.songOffset + Tt.mods.offset + Bt.settings.offset) && !Tt.songPlaying && !Tt.paused ? (Qt[Tt.song].rate(Tt.mods.bpm),
+    Qt[Tt.song].volume(Bt.settings.musicVolume / 100),
+    e = Qt[Tt.song].play(),
+    Qt[Tt.song].seek((Tt.songOffset + Tt.mods.offset + Bt.settings.offset) / 1e3 + (0 === Tt.playingOffset ? -5 : Tt.playingOffset / 120 * 60), e),
+    Tt.songPlaying = !0) : Tt.paused && (Qt[Tt.song].pause(),
+    Tt.songPlaying = !1)),
+    Tt.edit || !1 !== Tt.songEnded || Qt[Tt.song].on("end", function() {
+        console.log("ENDED SONG"),
+        Tt.songEnded = [millis(), Qt[Tt.song].duration]
+    }),
+    !1 !== Tt.edit || Tt.paused || 1 !== Tt.disMode || (!1 !== Tt.songPlaying || !1 !== Ne && "hidden" !== Ne || !1 === Tt.preLevelStart ? (//(console.log("Seek:" + Qt[Tt.song].seek()),
+    t = ((e = !1 === Tt.songEnded ? Qt[Tt.song].seek() : Qt[Tt.song].duration() + (!1 === Tt.songEnded ? 0 : (millis() - Tt.songEnded[0]) / 1e3 * Tt.mods.bpm)) - (Tt.songOffset + Tt.mods.offset + Bt.settings.offset) / 1e3) * (Tt.bpm / 60) / Tt.mods.bpm,
+    //console.log("Song pos:" + e),
+    //console.log("Next time:" + t),
+    (-1e3 < (t - Tt.time) * Tt.mods.bpm / (Tt.bpm / 60) || "set" === Tt.time) && (Tt.time = t)) : (Tt.time = (millis() - Tt.preLevelStart - 5e3) / 1e3 * (Tt.bpm / 60)))
+    //console.log(Tt.time)))
 }
